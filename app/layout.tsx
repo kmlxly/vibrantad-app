@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ms" className={publicSans.variable}>
-      <body className="bg-neo-bg text-neo-dark min-h-screen flex flex-col selection:bg-neo-yellow selection:text-neo-dark font-sans">
+      <body suppressHydrationWarning className="bg-neo-bg text-neo-dark min-h-screen flex flex-col selection:bg-neo-yellow selection:text-neo-dark font-sans">
         {children}
       </body>
     </html>

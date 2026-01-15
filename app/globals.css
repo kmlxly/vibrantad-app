@@ -15,8 +15,94 @@
   --shadow-neo-lg: 8px 8px 0px 0px rgba(0, 0, 0, 1);
 
   --radius-neo: 12px;
-  
-  --border-width-3: 3px;
+
+  --animate-marquee-left: marquee-left 600s linear infinite;
+  --animate-marquee-right: marquee-right 600s linear infinite;
+  --animate-bounce-slow: bounce 3s infinite;
+  --animate-spin-slow: spin 4s linear infinite;
+  --animate-drop-in: drop-in 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+
+  @keyframes marquee-left {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+
+    100% {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+
+  @keyframes marquee-right {
+    0% {
+      transform: translate3d(-50%, 0, 0);
+    }
+
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes drop-in {
+    0% {
+      transform: translate3d(0, -120vw, 0);
+      opacity: 0;
+    }
+
+    100% {
+      transform: translate3d(0, 0, 0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes gradient-x {
+    0% {
+      background-position: 0% 50%;
+    }
+
+    50% {
+      background-position: 100% 50%;
+    }
+
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+}
+
+.animate-marquee-left,
+.animate-marquee-right {
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+@keyframes move-stripes {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 1rem 0;
+  }
+}
+
+.hover-stripes {
+  transition: all 0.3s ease;
+}
+
+.group:hover .hover-stripes {
+  background-image: linear-gradient(45deg,
+      rgba(255, 255, 255, 0.2) 25%,
+      transparent 25%,
+      transparent 50%,
+      rgba(255, 255, 255, 0.2) 50%,
+      rgba(255, 255, 255, 0.2) 75%,
+      transparent 75%,
+      transparent);
+  background-size: 1rem 1rem;
+  animation: move-stripes 1s linear infinite;
 }
 
 :root {
@@ -59,10 +145,12 @@ body {
 ::-webkit-scrollbar {
   width: 10px;
 }
+
 ::-webkit-scrollbar-track {
   background: #FBF7F0;
   border-left: 2px solid black;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #FF6B6B;
   border: 2px solid black;

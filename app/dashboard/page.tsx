@@ -2,22 +2,30 @@
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { LogOut, FolderPlus, Trash2, FolderOpen, User, Edit3, X, Check, Briefcase, Shield, Crown, Filter, Camera, Loader2, Building2, Calendar, Clock } from 'lucide-react'
+import { LogOut, FolderPlus, Trash2, FolderOpen, User, Edit3, X, Check, Briefcase, Shield, Crown, Filter, Camera, Loader2, Building2, Calendar, Clock, ChevronDown } from 'lucide-react'
 
-// Define types (Tambah avatar_url)
+// Define types
 type Profile = { id: string; full_name: string; job_title: string; role: string; company_name: string; avatar_url: string | null }
-type Project = { id: number; name: string; description: string; user_id: string; profiles?: { full_name: string } }
+type Project = {
+  id: number;
+  name: string;
+  description: string;
+  user_id: string;
+  profiles?: { full_name: string; avatar_url: string | null };
+  status?: string;
+  color?: string;
+}
 
 export default function Dashboard() {
   const router = useRouter()
-  
+
   // Data States
   const [profile, setProfile] = useState<Profile | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
-  const [staffList, setStaffList] = useState<Profile[]>([]) 
+  const [staffList, setStaffList] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
-  const [uploading, setUploading] = useState(false) // State untuk loading upload gambar
-  
+  const [uploading, setUploading] = useState(false)
+
   // Filter State
   const [selectedStaffId, setSelectedStaffId] = useState<string>('all')
 
@@ -26,9 +34,21 @@ export default function Dashboard() {
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [newProjectName, setNewProjectName] = useState('')
   const [newProjectDesc, setNewProjectDesc] = useState('')
+  const [newProjectStatus, setNewProjectStatus] = useState('active')
+  const [newProjectColor, setNewProjectColor] = useState('neo-yellow')
 
   // Live Date State
   const [currentTime, setCurrentTime] = useState(new Date())
+
+  // Color Palette Options
+  const colorOptions = [
+    { name: 'yellow', value: 'neo-yellow', hex: '#FDE047' },
+    { name: 'red', value: 'neo-primary', hex: '#FF6B6B' },
+    { name: 'blue', value: 'blue-400', hex: '#60A5FA' },
+    { name: 'green', value: 'green-400', hex: '#4ADE80' },
+    { name: 'purple', value: 'purple-400', hex: '#C084FC' },
+    { name: 'orange', value: 'orange-400', hex: '#FB923C' },
+  ]
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -37,7 +57,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchData()
-  }, [selectedStaffId]) 
+  }, [selectedStaffId])
 
   const fetchData = async () => {
     // 1. Cek User Session
@@ -52,9 +72,9 @@ export default function Dashboard() {
     // Nota: Kita gunakan join ke table profiles untuk dapatkan full_name pencipta
     let query = supabase
       .from('projects')
-      .select('*, profiles:user_id(full_name)') 
+      .select('*, profiles:user_id(full_name, avatar_url)')
       .order('created_at', { ascending: false })
-    
+
     if (profileData?.role === 'admin') {
       // Admin View: Fetch all profiles for filtering if not already fetched
       if (staffList.length === 0) {
@@ -71,9 +91,9 @@ export default function Dashboard() {
     }
 
     const { data: projectData, error: projectError } = await query
-    if (projectError) {
-      console.error('Error fetching projects:', projectError)
-    }
+    if (projectError) console.error('Error fetching projects:', projectError)
+
+    // Fallback if columns don't exist yet to avoid crashes (optional safety)
     setProjects(projectData || [])
     setLoading(false)
   }
@@ -82,49 +102,32 @@ export default function Dashboard() {
   const handleUploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true)
-
-      if (!event.target.files || event.target.files.length === 0) {
-        throw new Error('Sila pilih gambar.')
-      }
+      if (!event.target.files || event.target.files.length === 0) throw new Error('Sila pilih gambar.')
 
       const file = event.target.files[0]
       const fileExt = file.name.split('.').pop()
       const fileName = `${Math.random()}.${fileExt}`
       const filePath = `${profile?.id}/${fileName}`
 
-      // 1. Cek/Guna Bucket 'avatars' (Pastikan bucket ini Public di Supabase)
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true
-        })
+        .upload(filePath, file, { cacheControl: '3600', upsert: true })
 
-      if (uploadError) {
-        if (uploadError.message.includes('not found')) {
-          throw new Error('Bucket "avatars" tidak dijumpai. Sila cipta bucket bernama "avatars" di Dashboard Supabase anda dan set sebagai PUBLIC.')
-        }
-        throw uploadError
-      }
+      if (uploadError) throw uploadError
 
-      // 2. Dapatkan Public URL
-      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath)
-      const publicUrl = urlData.publicUrl
+      const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath)
 
-      // 3. Simpan URL dalam Table Profiles
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: publicUrl })
+        .update({ avatar_url: publicUrlData.publicUrl })
         .eq('id', profile?.id)
 
       if (updateError) throw updateError
 
-      // 4. Update UI
-      setProfile(prev => prev ? { ...prev, avatar_url: publicUrl } : null)
+      setProfile(prev => prev ? { ...prev, avatar_url: publicUrlData.publicUrl } : null)
       alert('Gambar profil berjaya dikemaskini!')
-
     } catch (error: any) {
-      alert('Gagal upload: ' + error.message)
+      alert(error.message)
     } finally {
       setUploading(false)
     }
@@ -135,217 +138,271 @@ export default function Dashboard() {
     router.push('/')
   }
 
+  // Explicitly map colors to classes so Tailwind JIT picks them up
+  const baseColorMap: Record<string, string> = {
+    'neo-yellow': 'bg-neo-yellow',
+    'neo-primary': 'bg-neo-primary',
+    'blue-400': 'bg-blue-400',
+    'green-400': 'bg-green-400',
+    'purple-400': 'bg-purple-400',
+    'orange-400': 'bg-orange-400',
+  }
+
+  const hoverGradientMap: Record<string, string> = {
+    'neo-yellow': 'group-hover:bg-gradient-to-r group-hover:from-neo-yellow group-hover:via-white group-hover:to-neo-yellow',
+    'neo-primary': 'group-hover:bg-gradient-to-r group-hover:from-neo-primary group-hover:via-red-300 group-hover:to-neo-primary',
+    'blue-400': 'group-hover:bg-gradient-to-r group-hover:from-blue-400 group-hover:via-blue-200 group-hover:to-blue-400',
+    'green-400': 'group-hover:bg-gradient-to-r group-hover:from-green-400 group-hover:via-green-200 group-hover:to-green-400',
+    'purple-400': 'group-hover:bg-gradient-to-r group-hover:from-purple-400 group-hover:via-purple-200 group-hover:to-purple-400',
+    'orange-400': 'group-hover:bg-gradient-to-r group-hover:from-orange-400 group-hover:via-orange-200 group-hover:to-orange-400',
+  }
+
+  // --- CRUD PROJEK --- (Rest of function remains same)
   const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newProjectName) return
+    if (!newProjectName.trim()) return
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    try {
-    if (editingProject) {
-      console.log('Updating project:', editingProject.id)
-      
-      // 1. Matikan re-fetch sementara dengan set projects secara manual
-      const updatedProjects = projects.map(p => 
-        p.id === editingProject.id ? { ...p, name: newProjectName, description: newProjectDesc } : p
-      )
-      setProjects(updatedProjects)
-
-      // 2. Simpan ke Database
-      const { data: checkData, error, status } = await supabase
-        .from('projects')
-        .update({ 
-          name: newProjectName, 
-          description: newProjectDesc 
-        })
-        .eq('id', editingProject.id)
-        .select() // PENTING: Minta data balik untuk pastikan ia masuk ke DB
-      
-      console.log('Supabase Status (Update):', status)
-      console.log('Returned Data (Update):', checkData)
-
-      if (error) {
-        // Jika error, rollback UI balik
-        await fetchData()
-        throw error
-      }
-
-      if (!checkData || checkData.length === 0) {
-        console.error('No rows affected. RLS or invalid ID?')
-        throw new Error('Tiada perubahan dikesan. Mungkin anda tiada akses untuk edit projek ini.')
-      }
-      
-      resetModal()
-      alert('Berjaya dikemaskini!')
-      // fetchData() dipanggil oleh useEffect jika selectedStaffId berubah, 
-      // tapi untuk edit kita tak perlu paksa re-fetch jika state dah local update
-    } else {
-        console.log('Adding new project')
-        const { data, error } = await supabase.from('projects')
-          .insert([{ 
-            name: newProjectName, 
-            description: newProjectDesc, 
-            user_id: user.id 
-          }])
-          .select()
-        
-        console.log('Response from Supabase (Insert):', { data, error })
-
-        if (error) throw error
-        
-        resetModal()
-        await fetchData()
-      }
-    } catch (err: any) {
-      console.error('Operation failed:', err)
-      alert('Ralat sistem: ' + (err.message || 'Sila semak konsol'))
+    const projectData = {
+      name: newProjectName,
+      description: newProjectDesc,
+      status: newProjectStatus,
+      color: newProjectColor,
+      user_id: user.id
     }
-  }
 
-  const resetModal = () => {
-    setShowModal(false); setEditingProject(null); setNewProjectName(''); setNewProjectDesc('')
-  }
-  
-  const handleEditClick = (e: React.MouseEvent, proj: Project) => {
-    e.stopPropagation(); setEditingProject(proj); setNewProjectName(proj.name); setNewProjectDesc(proj.description || ''); setShowModal(true)
+    try {
+      if (editingProject) {
+        // PERCUBAAN 1: Update Semua Kolum
+        const { error } = await supabase
+          .from('projects')
+          .update(projectData)
+          .eq('id', editingProject.id)
+
+        if (error) {
+          // Fallback: Jika error sebab kolum tiada, cuba update yang asas sahaja
+          if (error.message.includes('column') || error.message.includes('Schema')) {
+            console.warn('Kolum baru belum ada di DB, mencuba update asas...')
+            const { error: retryError } = await supabase
+              .from('projects')
+              .update({ name: newProjectName, description: newProjectDesc })
+              .eq('id', editingProject.id)
+
+            if (retryError) throw retryError
+            alert('Projek dikemaskini (Ciri Warna/Status belum aktif di server)')
+          } else {
+            throw error
+          }
+        }
+      } else {
+        // PERCUBAAN 1: Insert Semua Kolum
+        const { error } = await supabase.from('projects').insert([projectData])
+
+        if (error) {
+          // Fallback
+          if (error.message.includes('column') || error.message.includes('Schema')) {
+            console.warn('Kolum baru belum ada di DB, mencuba insert asas...')
+            const { error: retryError } = await supabase
+              .from('projects')
+              .insert([{ name: newProjectName, description: newProjectDesc, user_id: user.id }])
+
+            if (retryError) throw retryError
+            alert('Projek dicipta (Ciri Warna/Status belum aktif di server)')
+          } else {
+            throw error
+          }
+        }
+      }
+
+      fetchData()
+      resetModal()
+    } catch (error: any) {
+      console.error('Error saving project:', error)
+      alert(`Gagal: ${error.message}`)
+    }
   }
 
   const handleDeleteProject = async (id: number) => {
-    if(!confirm("Adakah anda pasti mahu memadam projek ini secara kekal?")) return;
-    
-    try {
-      console.log('Attempting to delete project:', id)
-      
-      const { error, status } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', id)
-        .select() // Paksa select untuk confirm delete
-
-      console.log('Supabase Status (Delete):', status)
-      
-      if (error) throw error
-      
-      console.log('Delete successful')
-      // Paksa buang dari UI state dulu
-      setProjects(prev => prev.filter(p => p.id !== id))
-      
-      await fetchData()
-      alert('Berjaya dipadam!')
-    } catch (err: any) {
-      console.error('Delete failed:', err)
-      alert("Gagal memadam: " + err.message)
+    if (confirm('Adakah anda pasti mahu memadam projek ini?')) {
+      const { error } = await supabase.from('projects').delete().eq('id', id)
+      if (error) alert('Error deleting project: ' + error.message)
+      else fetchData()
     }
   }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#FBF7F0] font-bold">LOADING...</div>
+  const handleEditClick = (e: React.MouseEvent, proj: Project) => {
+    e.stopPropagation()
+    setEditingProject(proj)
+    setNewProjectName(proj.name)
+    setNewProjectDesc(proj.description || '')
+    setNewProjectStatus(proj.status || 'active')
+    setNewProjectColor(proj.color || 'neo-yellow')
+    setShowModal(true)
+  }
+
+  const resetModal = () => {
+    setShowModal(false)
+    setEditingProject(null)
+    setNewProjectName('')
+    setNewProjectDesc('')
+    setNewProjectStatus('active')
+    setNewProjectColor('neo-yellow')
+  }
+
+  if (loading) return (
+    <div className="min-h-screen bg-neo-bg flex items-center justify-center">
+      <Loader2 className="animate-spin w-10 h-10 text-neo-dark" />
+    </div>
+  )
 
   const isAdmin = profile?.role === 'admin'
 
   return (
-    <div className="min-h-screen p-4 md:p-6 max-w-7xl mx-auto font-sans">
-      
-      {/* HEADER SECTION */}
-      <header className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 neo-card bg-white p-6 flex items-center gap-6 relative overflow-hidden">
-          
-          {/* --- GAMBAR PROFILE & UPLOAD BUTTON --- */}
-          <div className="relative group">
-            <div className="w-24 h-24 bg-neo-yellow border-2 border-black rounded-full flex items-center justify-center shrink-0 shadow-neo overflow-hidden">
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                <User size={40} className="text-black" />
-              )}
+    <div className="min-h-screen bg-neo-bg text-neo-dark font-sans p-4 sm:p-6 pb-20 max-w-7xl mx-auto">
+
+      {/* HEADER: Compact & Responsive */}
+      <header className="mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+          {/* USER PROFILE CARD */}
+          {/* USER PROFILE CARD - REDESIGNED */}
+          {/* USER PROFILE CARD - COMPACT REDESIGN */}
+          <div className="lg:col-span-8 group relative bg-white border-2 border-black rounded-xl p-5 flex flex-col sm:flex-row items-center gap-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+
+            {/* Decorative Background Elements */}
+            <div className="absolute top-0 right-0 w-48 h-48 bg-neo-yellow rounded-full mix-blend-multiply blur-3xl opacity-20 animate-pulse pointer-events-none transform translate-x-1/3 -translate-y-1/3"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-neo-primary rounded-full mix-blend-multiply blur-3xl opacity-20 pointer-events-none transform -translate-x-1/3 translate-y-1/3"></div>
+
+            {/* AVATAR SECTION */}
+            <div className="relative shrink-0">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-black bg-zinc-100 overflow-hidden relative z-10 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] group-hover:scale-105 transition-transform duration-300">
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-zinc-100 text-zinc-300">
+                    <User size={40} />
+                  </div>
+                )}
+              </div>
+              {/* Edit Button */}
+              <label className="absolute bottom-0 right-0 z-20 bg-black text-white p-2 rounded-full cursor-pointer hover:bg-neo-primary hover:text-white transition-all border-2 border-white hover:scale-110 active:scale-95 shadow-lg group-hover:rotate-12">
+                <Camera size={14} />
+                <input type="file" accept="image/*" className="hidden" onChange={handleUploadAvatar} disabled={uploading} />
+              </label>
             </div>
-            
-            {/* Butang Kamera (Overlay) */}
-            <label className="absolute bottom-0 right-0 bg-white border-2 border-black p-1.5 rounded-full cursor-pointer hover:bg-gray-200 transition-colors shadow-sm">
-              {uploading ? <Loader2 size={14} className="animate-spin"/> : <Camera size={14} />}
-              <input 
-                type="file" 
-                className="hidden" 
-                accept="image/*"
-                onChange={handleUploadAvatar}
-                disabled={uploading}
-              />
-            </label>
-          </div>
-          
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1.5 mb-1">
-              <Building2 size={12} className="text-zinc-500" />
-              <span className="font-black uppercase tracking-widest text-[10px] text-zinc-500">
-                {profile?.company_name || 'Vibrant Tactic'}
-              </span>
-            </div>
-            <h1 className="text-3xl font-black uppercase tracking-tighter leading-none mb-3 italic">
-              {profile?.full_name}
-            </h1>
-            
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap gap-2">
-                <span className="bg-blue-300 border-2 border-black px-2.5 py-0.5 text-[10px] font-black uppercase flex items-center gap-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                  <Briefcase size={10} /> {profile?.job_title || 'Staff'}
-                </span>
-                <span className={`border-2 border-black px-2.5 py-0.5 text-[10px] font-black uppercase flex items-center gap-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${isAdmin ? 'bg-red-300' : 'bg-green-300'}`}>
-                  {isAdmin ? <Crown size={10}/> : <Shield size={10}/>} 
-                  {profile?.role || 'User'}
-                </span>
+
+            {/* TEXT CONTENT SECTION */}
+            <div className="flex-grow text-center sm:text-left z-10 flex flex-col items-center sm:items-start gap-1 w-full">
+
+              {/* Greeting & Name */}
+              <div className="mb-1.5">
+                <div className="flex items-center justify-center sm:justify-start gap-1.5 mb-0.5 opacity-60">
+                  <div className="h-[2px] w-3 bg-black"></div>
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em]">HELLO</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-black italic uppercase leading-none tracking-tighter text-black break-words w-full">
+                  {profile?.full_name || 'Staff'}
+                </h1>
               </div>
 
-              {/* LIVE DATE & TIME - Moved here */}
-              <div className="flex items-center gap-2">
-                <div className="bg-neo-dark text-white px-2 py-0.5 border-2 border-black text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                  <Calendar size={10} className="text-neo-yellow" />
-                  {currentTime.toLocaleDateString('ms-MY', { day: '2-digit', month: 'long', year: 'numeric' })}
+              {/* Details Row */}
+              <div className="flex flex-wrap justify-center sm:justify-start gap-2 w-full">
+                <div className="flex items-center gap-1.5 text-zinc-700 bg-zinc-100 px-2.5 py-1 rounded border border-zinc-200">
+                  <Briefcase size={12} className="text-zinc-400" />
+                  <span className="font-bold text-[10px] sm:text-xs uppercase tracking-wide">{profile?.job_title || 'Jawatan'}</span>
                 </div>
-                <div className="bg-white text-black px-2 py-0.5 border-2 border-black text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                  <Clock size={10} className="text-neo-primary" />
-                  {currentTime.toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+
+                <div className="flex items-center gap-1.5 text-black bg-neo-yellow px-2.5 py-1 rounded border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform -rotate-1 hover:rotate-0 transition-transform">
+                  <Building2 size={12} strokeWidth={2.5} />
+                  <span className="font-black text-[10px] sm:text-xs uppercase tracking-wide">
+                    {profile?.company_name || 'Generic Corp'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Role Badge */}
+              <div className="mt-2.5 w-full border-t border-dashed border-zinc-300 pt-2.5 flex justify-center sm:justify-start">
+                <div className="inline-flex items-center gap-1.5 bg-black text-white px-3 py-1 rounded-full border-2 border-transparent group-hover:border-neo-primary transition-colors hover:bg-zinc-800">
+                  <Shield size={12} className="text-neo-primary" />
+                  <span className="text-[9px] font-black uppercase tracking-widest">Peranan SYSTEM: {profile?.role || 'User'}</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* STATS & ACTIONS SIDEBAR */}
+          <div className="lg:col-span-4 flex flex-col sm:flex-row lg:flex-col gap-3">
+            {/* Stats Card */}
+            <div className="neo-card bg-neo-dark text-white p-3 flex-1 flex flex-col justify-center items-center text-center relative overflow-hidden group min-h-[100px]">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neo-primary to-neo-yellow"></div>
+              <div className="absolute -right-2 -bottom-2 text-6xl font-black text-white opacity-5 select-none leading-none z-0">{projects.length}</div>
+              <div className="relative z-10">
+                <h3 className="text-zinc-400 text-[9px] font-bold uppercase tracking-widest mb-0.5">
+                  {selectedStaffId === 'all' ? 'Projek Pasukan' : 'Jumlah Paparan'}
+                </h3>
+                <div className="text-4xl font-black text-neo-yellow leading-none mb-0.5 group-hover:scale-110 transition-transform duration-300 drop-shadow-[2px_2px_0px_rgba(255,107,107,0.5)]">
+                  {projects.length}
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div className="neo-card bg-neo-dark text-white p-6 flex flex-col justify-between">
-          <div>
-            <div className="text-xs font-bold text-zinc-400 uppercase mb-1">Total Projek Dipaparkan</div>
-            <div className="text-4xl font-black text-neo-yellow">{projects.length}</div>
+            {/* Date/Time & Logout */}
+            <div className="neo-card bg-white p-3 flex-1 flex flex-col justify-center gap-2">
+              <div className="flex justify-between items-center border-b-2 border-zinc-100 pb-1.5 mb-0.5">
+                <div className="flex items-center gap-1.5">
+                  <Calendar size={12} className="text-black" />
+                  <span className="text-[10px] font-bold uppercase">{currentTime.toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Clock size={12} className="text-neo-primary" />
+                  <span className="text-[10px] font-bold uppercase">{currentTime.toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="w-full group bg-white hover:bg-neo-primary hover:text-white border-2 border-black rounded-lg text-black font-black py-2.5 px-4 flex items-center justify-center gap-2 text-xs transition-all uppercase shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]"
+              >
+                <LogOut size={14} strokeWidth={3} className="group-hover:translate-x-1 transition-transform duration-300" />
+                Log Keluar
+              </button>
+            </div>
           </div>
-          <button onClick={handleLogout} className="mt-4 bg-white text-black border-2 border-white hover:bg-zinc-200 font-bold py-2 px-4 flex items-center justify-center gap-2 text-sm transition-colors">
-            <LogOut size={16} /> LOG KELUAR
-          </button>
         </div>
       </header>
 
-      {/* FILTER & ACTIONS */}
-      <div className="flex flex-col md:flex-row justify-between items-end md:items-center mb-6 border-b-4 border-black pb-4 gap-4">
-        <div className="w-full md:w-auto">
-          <h2 className="text-2xl font-black uppercase italic mb-1">{isAdmin ? 'Pantau Projek' : 'Projek Saya'}</h2>
-          
-          {isAdmin ? (
-            <div className="flex items-center gap-2 mt-2 bg-white border-2 border-black px-3 py-2 shadow-neo-sm w-full md:w-auto">
-              <Filter size={18} className="text-zinc-500" />
-              <span className="font-bold text-xs uppercase mr-2">Tapis Staff:</span>
-              <select className="bg-transparent font-bold outline-none cursor-pointer text-sm min-w-[150px]" value={selectedStaffId} onChange={(e) => setSelectedStaffId(e.target.value)}>
-                <option value="all">SEMUA STAFF</option>
-                <option disabled>----------------</option>
-                {staffList.map((staff) => (
-                  <option key={staff.id} value={staff.id}>{staff.full_name}</option>
-                ))}
-              </select>
+      {/* FILTER & ACTIONS TOOLBAR */}
+      <div className="mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white border-2 border-black p-4 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          {/* Left Side */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="bg-black text-white p-2.5 rounded-lg shrink-0"><FolderOpen size={20} /></div>
+              <div>
+                <h2 className="text-xl font-black uppercase italic leading-none">{isAdmin ? 'Pantau Projek' : 'Projek Saya'}</h2>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mt-0.5">{isAdmin ? 'Mod Admin' : 'Paparan Staff'}</p>
+              </div>
             </div>
-          ) : (
-            <p className="text-sm font-bold text-zinc-500">Senarai tugasan aktif anda.</p>
-          )}
+            {isAdmin && (
+              <div className="relative group w-full sm:w-auto mt-2 sm:mt-0">
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none"><Filter size={14} className="text-black group-hover:text-neo-primary transition-colors" /></div>
+                <select className="appearance-none w-full sm:w-64 bg-zinc-50 border-2 border-black pl-10 pr-10 py-2.5 font-bold text-xs uppercase rounded-lg cursor-pointer hover:bg-neo-yellow transition-colors outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" value={selectedStaffId} onChange={(e) => setSelectedStaffId(e.target.value)}>
+                  <option value="all">Semua Staff</option>
+                  <option disabled>----------------</option>
+                  {staffList.map((staff) => (<option key={staff.id} value={staff.id}>{staff.full_name}</option>))}
+                </select>
+                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none"><ChevronDown size={14} className="text-black" /></div>
+              </div>
+            )}
+          </div>
+          {/* Right Side */}
+          <button onClick={() => setShowModal(true)} className="w-full md:w-auto bg-neo-primary text-white border-2 border-black px-6 py-2.5 font-black uppercase tracking-wide rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2 group">
+            <FolderPlus size={18} className="group-hover:rotate-12 transition-transform" />
+            <span>Tambah Projek</span>
+          </button>
         </div>
-
-        <button onClick={() => setShowModal(true)} className="neo-btn bg-neo-primary text-white flex items-center gap-2">
-          <FolderPlus size={18} /> <span className="font-bold">TAMBAH PROJEK</span>
-        </button>
       </div>
 
       {/* PROJECTS GRID */}
@@ -357,50 +414,130 @@ export default function Dashboard() {
           </div>
         )}
 
-        {projects.map((proj) => (
-          <div key={proj.id} onClick={() => router.push(`/dashboard/${proj.id}`)} className="neo-card bg-white p-0 cursor-pointer group hover:-translate-y-1 transition-transform h-full flex flex-col">
+        {projects.map((proj) => {
+          // Dynamic Color Logic
+          const colorClass = proj.color ? `bg-${proj.color}` : 'bg-neo-yellow';
+          // Ensure valid background class, otherwise fallback (simple hack without mapping full palette in safelist)
+          // For now, assuming Tailwind arbitrary values are not needed if we stick to safelisted or known classes.
+          // Or we use style attribute for safety if we are unsure about arbitrary class construction.
 
-            <div className="p-4 border-b-2 border-black bg-zinc-50 group-hover:bg-neo-yellow transition-colors flex justify-between items-start">
-              <FolderOpen size={24} strokeWidth={2.5} />
-              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={(e) => handleEditClick(e, proj)} className="bg-white p-1.5 border-2 border-black hover:shadow-neo-sm text-black"><Edit3 size={14} /></button>
-                <button onClick={(e) => { e.stopPropagation(); handleDeleteProject(proj.id); }} className="bg-red-500 p-1.5 border-2 border-black hover:shadow-neo-sm text-white"><Trash2 size={14} /></button>
+          return (
+            <div
+              key={proj.id}
+              onClick={() => router.push(`/dashboard/${proj.id}`)}
+              className="group relative flex flex-col justify-between h-full bg-white border-2 border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 hover:-translate-y-1 cursor-pointer overflow-hidden"
+            >
+              {/* Decorative Header Strip with Dynamic Color & Moving Stripes */}
+              <div className={`h-3 w-full ${baseColorMap[proj.color || 'neo-yellow']} hover-stripes flex items-center justify-end px-2`}>
+                <div className="w-16 h-full bg-white/20 transform -skew-x-12"></div>
               </div>
-            </div>
-            <div className="p-5 flex-grow">
-              <h3 className="text-xl font-black uppercase leading-tight mb-2 group-hover:underline decoration-2 underline-offset-2">{proj.name}</h3>
-              <p className="text-sm font-medium text-zinc-500 line-clamp-3">{proj.description || "Tiada deskripsi."}</p>
-            </div>
-            <div className="px-4 py-3 bg-black text-white text-[9px] font-bold uppercase flex flex-col gap-1 mt-auto">
-              <div className="flex justify-between items-center w-full">
-                <span>ID: #{proj.id}</span>
-                <span className="flex items-center gap-1 text-neo-yellow">Active <Check size={12} /></span>
-              </div>
-              {proj.profiles?.full_name && (
-                <div className="pt-1 border-t border-white/20 flex items-center gap-1 text-zinc-400">
-                  <User size={10} />
-                  <span className="tracking-tighter">CREATOR: {proj.profiles.full_name}</span>
+
+              {/* Main Content */}
+              <div className="p-5 flex-grow flex flex-col relative">
+                {/* Top Row: Actions */}
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex gap-2">
+                    <span className="font-mono text-[10px] font-black tracking-widest bg-zinc-100 px-2 py-1 rounded border border-black text-zinc-500">
+                      #{proj.id.toString().padStart(3, '0')}
+                    </span>
+                    {/* Status Badge */}
+                    <span className={`text-[10px] font-black uppercase px-2 py-1 rounded border border-black ${proj.status === 'completed' ? 'bg-zinc-800 text-white' : 'bg-green-400 text-black animate-pulse'}`}>
+                      {proj.status === 'completed' ? 'Selesai' : 'Aktif'}
+                    </span>
+                  </div>
+
+                  {/* Floating Actions */}
+                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute top-4 right-4 bg-white/90 backdrop-blur border border-black rounded-full p-1 shadow-sm z-10">
+                    <button onClick={(e) => handleEditClick(e, proj)} className="p-1.5 hover:bg-neo-yellow rounded-full text-black transition-colors" title="Edit"><Edit3 size={14} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteProject(proj.id); }} className="p-1.5 hover:bg-red-500 hover:text-white rounded-full text-red-500 transition-colors" title="Delete"><Trash2 size={14} /></button>
+                  </div>
                 </div>
-              )}
+
+                <div className="mb-4">
+                  <h3 className="text-2xl font-black uppercase leading-[1.1] mb-2 tracking-tight group-hover:underline decoration-2 underline-offset-2 decoration-black transition-all line-clamp-2">
+                    {proj.name}
+                  </h3>
+                  <p className="text-sm font-medium text-zinc-500 line-clamp-3 leading-relaxed">
+                    {proj.description || "Tiada deskripsi projek."}
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer Metadata */}
+              <div className="px-5 py-3 border-t-2 border-black bg-zinc-50 flex items-center justify-between gap-4 group-hover:bg-zinc-100 transition-colors">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-full border-2 border-black bg-zinc-200 overflow-hidden flex-shrink-0 shadow-sm">
+                    {proj.profiles?.avatar_url ? <img src={proj.profiles.avatar_url} alt="Creator" className="w-full h-full object-cover" /> : <User size={16} className="w-full h-full p-1.5 text-black" />}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[9px] font-bold uppercase text-zinc-400 leading-none mb-0.5 whitespace-nowrap">Created By</span>
+                    <span className="text-xs font-black uppercase text-black leading-none truncate w-full">{proj.profiles?.full_name?.split(' ')[0] || 'Unknown'}</span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="neo-card bg-white w-full max-w-lg shadow-[8px_8px_0px_0px_rgba(255,255,255,0.5)] animate-in zoom-in-95">
-            <div className="flex justify-between items-center mb-6 border-b-2 border-black pb-4">
-              <h3 className="text-2xl font-black uppercase italic">{editingProject ? 'Kemaskini Projek' : 'Projek Baru'}</h3>
-              <button onClick={resetModal} className="hover:bg-red-100 p-1 rounded-md transition-colors"><X size={24} /></button>
+          <div className="bg-white w-full max-w-lg border-4 border-black rounded-xl shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] animate-in zoom-in-95 overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b-4 border-black">
+              <h3 className="text-3xl font-black uppercase italic tracking-tighter transform -skew-x-6">{editingProject ? 'Kemaskini Projek' : 'Projek Baru'}</h3>
+              <button onClick={resetModal} className="bg-red-100 hover:bg-red-500 hover:text-white border-2 border-transparent hover:border-black p-2 rounded-lg transition-all"><X size={20} /></button>
             </div>
-            <form onSubmit={handleAddProject} className="space-y-6">
-              <div><label className="block font-black text-sm uppercase mb-2">Nama Projek</label><input autoFocus required className="neo-input w-full" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} /></div>
-              <div><label className="block font-black text-sm uppercase mb-2">Deskripsi</label><textarea className="neo-input w-full h-32" value={newProjectDesc} onChange={e => setNewProjectDesc(e.target.value)} /></div>
-              <div className="grid grid-cols-2 gap-4 pt-4">
-                <button type="button" onClick={resetModal} className="bg-zinc-200 border-2 border-black font-black py-3 hover:bg-zinc-300 shadow-neo transition-all">BATAL</button>
-                <button type="submit" className="bg-neo-primary text-white border-2 border-black font-black py-3 hover:bg-red-400 shadow-neo transition-all">{editingProject ? 'SIMPAN' : 'CIPTA'}</button>
+            <form onSubmit={handleAddProject} className="p-6 space-y-6">
+              <div className="space-y-2">
+                <label className="block font-black text-xs uppercase tracking-wide ml-1">Nama Projek</label>
+                <input autoFocus required className="w-full bg-white border-2 border-black rounded-lg p-3 font-bold text-sm outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="Masukkan nama projek..." />
+              </div>
+              <div className="space-y-2">
+                <label className="block font-black text-xs uppercase tracking-wide ml-1">Deskripsi</label>
+                <textarea className="w-full bg-white border-2 border-black rounded-lg p-3 font-medium text-sm outline-none h-24 resize-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all" value={newProjectDesc} onChange={e => setNewProjectDesc(e.target.value)} placeholder="Terangkan serba sedikit mengenai projek ini..." />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Status Selection */}
+                <div className="space-y-2">
+                  <label className="block font-black text-xs uppercase tracking-wide ml-1">Status Projek</label>
+                  <div className="relative">
+                    <select
+                      className="w-full appearance-none bg-white border-2 border-black rounded-lg p-3 font-bold text-sm outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all cursor-pointer"
+                      value={newProjectStatus}
+                      onChange={(e) => setNewProjectStatus(e.target.value)}
+                    >
+                      <option value="active">AKTIF 🟢</option>
+                      <option value="completed">SELESAI ⚫️</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none"><ChevronDown size={16} /></div>
+                  </div>
+                </div>
+
+                {/* Color Selection */}
+                <div className="space-y-2">
+                  <label className="block font-black text-xs uppercase tracking-wide ml-1">Warna Kad</label>
+                  <div className="flex gap-2">
+                    {colorOptions.map((c) => (
+                      <button
+                        type="button"
+                        key={c.name}
+                        onClick={() => setNewProjectColor(c.value)}
+                        className={`w-8 h-8 rounded-full border-2 border-black flex items-center justify-center transition-transform hover:scale-110 active:scale-95 ${newProjectColor === c.value ? 'ring-2 ring-offset-2 ring-black' : ''}`}
+                        style={{ backgroundColor: c.hex }}
+                        title={c.name}
+                      >
+                        {newProjectColor === c.value && <Check size={14} className="text-black" strokeWidth={3} />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t-2 border-dashed border-zinc-200">
+                <button type="button" onClick={resetModal} className="bg-zinc-200 hover:bg-white text-black border-2 border-black font-black uppercase tracking-wide py-3.5 rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">Batal</button>
+                <button type="submit" className="bg-neo-primary hover:brightness-110 text-white border-2 border-black font-black uppercase tracking-wide py-3.5 rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">{editingProject ? 'Simpan' : 'Cipta'}</button>
               </div>
             </form>
           </div>

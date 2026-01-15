@@ -1,26 +1,69 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+  --color-neo-bg: #FBF7F0;
+  --color-neo-primary: #FF6B6B;
+  --color-neo-dark: #000000;
+  --color-neo-white: #FFFFFF;
+  --color-neo-yellow: #FDE047;
+
+  --shadow-neo: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+  --shadow-neo-sm: 2px 2px 0px 0px rgba(0, 0, 0, 1);
+  --shadow-neo-lg: 8px 8px 0px 0px rgba(0, 0, 0, 1);
+
+  --radius-neo: 12px;
+  
+  --border-width-3: 3px;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #FBF7F0;
+  --foreground: #000000;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Reset asas supaya font nampak kemas */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--background);
+  color: var(--foreground);
+  min-height: 100vh;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer components {
+  .neo-btn {
+    @apply border-2 border-black bg-neo-primary text-white font-black px-6 py-3 shadow-neo hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2;
+  }
+
+  .neo-card {
+    @apply bg-white border-2 border-black rounded-neo shadow-neo p-6;
+  }
+
+  .neo-box {
+    @apply bg-white border-2 border-black rounded-neo shadow-neo p-6;
+  }
+
+  .neo-badge {
+    @apply border-2 border-black px-2 py-0.5 text-xs font-bold rounded-full;
+  }
+
+  .neo-input {
+    @apply w-full bg-white border-2 border-black rounded-lg px-4 py-3 outline-none font-bold focus:shadow-neo focus:translate-x-[-2px] focus:translate-y-[-2px] transition-all placeholder:font-normal;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Scrollbar comel */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #FBF7F0;
+  border-left: 2px solid black;
+}
+::-webkit-scrollbar-thumb {
+  background: #FF6B6B;
+  border: 2px solid black;
 }

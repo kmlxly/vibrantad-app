@@ -1,65 +1,115 @@
-import Image from "next/image";
+'use client'
+import { useState } from 'react'
+import { supabase } from '@/lib/supabaseClient'
+import { useRouter } from 'next/navigation'
+import { Loader2, ArrowRight } from 'lucide-react'
+import Image from 'next/image'
 
-export default function Home() {
+export default function LoginPage() {
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (error) {
+      setError(error.message)
+      setLoading(false)
+    } else {
+      router.push('/dashboard')
+    }
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    // CONTAINER UTAMA: Flex center untuk letak kotak di tengah skrin
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#FBF7F0]">
+      
+      {/* KAD LOGIN: White bg, Thick Border, Hard Shadow, Rounded Corners */}
+      <div className="w-full max-w-md bg-white border-2 border-black rounded-2xl shadow-neo-lg p-8 relative overflow-hidden">
+        
+        {/* Hiasan background abstrak */}
+        <div className="absolute -top-6 -right-6 w-24 h-24 bg-yellow-300 rounded-full border-2 border-black z-0"></div>
+
+        <div className="relative z-10 text-center space-y-6">
+          
+          {/* Logo Favicon */}
+          <div className="flex justify-center">
+            <div className="bg-white p-3 border-2 border-black rounded-xl shadow-neo transform -rotate-6 hover:rotate-0 transition-transform duration-300 cursor-help overflow-hidden">
+              <Image 
+                src="/favicon.ico" 
+                alt="Logo" 
+                width={40} 
+                height={40} 
+                className="object-contain"
+              />
+            </div>
+          </div>
+          
+          {/* Tajuk */}
+          <div>
+            <h1 className="text-3xl font-black uppercase tracking-tight">Vibrant Staff App</h1>
+            <p className="text-gray-500 font-medium text-sm mt-2">Masuk untuk kemaskini laporan tugasan.</p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleLogin} className="space-y-5 text-left mt-6">
+            
+            {/* Error Alert */}
+            {error && (
+              <div className="bg-red-100 border-2 border-red-500 rounded-lg p-3 text-red-700 text-sm font-bold flex items-center gap-2">
+                <span className="block w-2 h-2 bg-red-600 rounded-full"></span>
+                {error}
+              </div>
+            )}
+            
+            <div>
+              <label className="block text-sm font-bold mb-1 ml-1">Email</label>
+              <input 
+                type="email" 
+                required
+                className="w-full bg-white border-2 border-black rounded-lg px-4 py-3 outline-none font-bold focus:shadow-neo focus:translate-x-[-2px] focus:translate-y-[-2px] transition-all placeholder:font-normal"
+                placeholder="nama@vibrant.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold mb-1 ml-1">Kata Laluan</label>
+              <input 
+                type="password" 
+                required
+                className="w-full bg-white border-2 border-black rounded-lg px-4 py-3 outline-none font-bold focus:shadow-neo focus:translate-x-[-2px] focus:translate-y-[-2px] transition-all placeholder:font-normal"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={loading} 
+              className="w-full bg-[#FF6B6B] text-white border-2 border-black rounded-lg py-3 font-black text-lg shadow-neo hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:bg-red-500 transition-all flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              {loading ? <Loader2 className="animate-spin" /> : <>Log Masuk <ArrowRight size={20}/></>}
+            </button>
+          </form>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
+      
+      <div className="fixed bottom-4 text-xs font-bold text-gray-400">
+        © 2026 Vibrant Tactic.
+      </div>
     </div>
-  );
+  )
 }

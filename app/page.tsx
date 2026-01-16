@@ -109,7 +109,7 @@ export default function LoginPage() {
                   type="email"
                   required
                   className="w-full bg-zinc-50 border-4 border-black rounded-lg p-2.5 font-bold text-base outline-none focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all placeholder:text-zinc-400 placeholder:font-medium text-black"
-                  placeholder="username@vibrant.com"
+                  placeholder="username@vibrantad.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />

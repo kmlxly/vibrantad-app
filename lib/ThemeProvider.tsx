@@ -24,14 +24,15 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     const [theme, setTheme] = useState<Theme>('light')
 
     useEffect(() => {
-        // Check local storage or system preference on mount
+        // Check local storage only, default to light
         const savedTheme = localStorage.getItem('theme') as Theme
         if (savedTheme) {
             setTheme(savedTheme)
             document.documentElement.classList.toggle('dark', savedTheme === 'dark')
-        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            setTheme('dark')
-            document.documentElement.classList.toggle('dark', true)
+        } else {
+            // Default to LIGHT explicitly, ignoring system pref
+            setTheme('light')
+            document.documentElement.classList.remove('dark')
         }
     }, [])
 

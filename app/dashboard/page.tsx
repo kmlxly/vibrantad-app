@@ -262,16 +262,16 @@ export default function Dashboard() {
   const isAdmin = profile?.role === 'admin'
 
   return (
-    <div className="min-h-screen bg-neo-bg text-neo-dark font-sans px-2 py-4 sm:px-6 pb-20 max-w-7xl mx-auto">
+    <div className="min-h-screen bg-neo-bg text-neo-dark font-sans !px-3 py-4 md:p-6 w-full max-w-7xl mx-auto pb-10">
 
       {/* HEADER: Compact & Responsive */}
       <header className="mb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 w-full">
 
           {/* USER PROFILE CARD */}
           {/* USER PROFILE CARD - REDESIGNED */}
           {/* USER PROFILE CARD - COMPACT REDESIGN */}
-          <div className="lg:col-span-8 group relative bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl p-3 sm:p-5 flex flex-col sm:flex-row items-center gap-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.5)] transition-all hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[10px_10px_0px_0px_rgba(255,255,255,0.8)] overflow-hidden">
+          <div className="lg:col-span-8 group relative bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-center gap-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.5)] transition-all hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[10px_10px_0px_0px_rgba(255,255,255,0.8)] overflow-hidden">
 
             {/* Decorative Background Elements */}
             <div className="absolute top-0 right-0 w-48 h-48 bg-neo-yellow rounded-full mix-blend-multiply blur-3xl opacity-20 animate-pulse pointer-events-none transform translate-x-1/3 -translate-y-1/3"></div>
@@ -299,12 +299,12 @@ export default function Dashboard() {
             <div className="flex-grow text-center sm:text-left z-10 flex flex-col items-center sm:items-start gap-1 w-full">
 
               {/* Greeting & Name */}
-              <div className="mb-1.5">
+              <div className="mb-1.5 w-full">
                 <div className="flex items-center justify-center sm:justify-start gap-1.5 mb-0.5 opacity-60">
                   <div className="h-[2px] w-3 bg-black dark:bg-white"></div>
                   <span className="text-[9px] font-black uppercase tracking-[0.2em] text-black dark:text-white">HELLO</span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black italic uppercase leading-none tracking-tighter text-black dark:text-white break-words w-full">
+                <h1 className="text-3xl sm:text-4xl font-black italic uppercase leading-[0.9] tracking-tighter text-black dark:text-white break-words w-full">
                   {profile?.full_name || 'Staff'}
                 </h1>
               </div>

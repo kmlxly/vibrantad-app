@@ -70,7 +70,7 @@ export default function LoginPage() {
         </div>
 
         {/* ID Card Holder */}
-        <div className="w-full bg-white border-4 border-black rounded-xl shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] p-6 pt-8 relative overflow-hidden group hover:translate-y-[5px] transition-transform duration-500 ease-in-out">
+        <div className="w-full bg-white border-4 border-black rounded-xl shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] p-6 pt-8 relative overflow-hidden group hover:translate-y-[5px] transition-transform duration-500 ease-in-out text-black">
 
           {/* Punch Hole */}
           <div className="absolute top-4 left-1/2 -translate-x-1/2 w-16 h-3 bg-zinc-200 border-2 border-black rounded-full shadow-inner"></div>
@@ -86,7 +86,7 @@ export default function LoginPage() {
               <div className="inline-block bg-neo-yellow p-3 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-full mb-3 group-hover:rotate-12 transition-transform duration-300">
                 <Image src="/favicon.ico" alt="Logo" width={40} height={40} className="object-contain" />
               </div>
-              <h1 className="text-3xl font-black uppercase italic tracking-tighter leading-none mb-1">
+              <h1 className="text-3xl font-black uppercase italic tracking-tighter leading-none mb-1 text-black">
                 Vibrant<br />Staff App
               </h1>
               <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 bg-zinc-100 inline-block px-2 py-0.5 rounded border border-black mt-1">
@@ -108,7 +108,7 @@ export default function LoginPage() {
                 <input
                   type="email"
                   required
-                  className="w-full bg-zinc-50 border-4 border-black rounded-lg p-2.5 font-bold text-base outline-none focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all placeholder:text-zinc-400 placeholder:font-medium"
+                  className="w-full bg-zinc-50 border-4 border-black rounded-lg p-2.5 font-bold text-base outline-none focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all placeholder:text-zinc-400 placeholder:font-medium text-black"
                   placeholder="username@vibrant.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -120,7 +120,7 @@ export default function LoginPage() {
                 <input
                   type="password"
                   required
-                  className="w-full bg-zinc-50 border-4 border-black rounded-lg p-2.5 font-bold text-base outline-none focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all placeholder:text-zinc-400 placeholder:font-medium text-lg tracking-widest"
+                  className="w-full bg-zinc-50 border-4 border-black rounded-lg p-2.5 font-bold text-base outline-none focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all placeholder:text-zinc-400 placeholder:font-medium text-lg tracking-widest text-black"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -142,7 +142,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div className="text-center mt-8">
-          <p className="text-[10px] font-black opacity-50 uppercase tracking-[0.2em]">© 2026 Vibrant Tactic SDN BHD</p>
+          <p className="text-[10px] font-black opacity-50 uppercase tracking-[0.2em] text-black">© 2026 Vibrant Tactic SDN BHD</p>
         </div>
 
       </div>

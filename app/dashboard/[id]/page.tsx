@@ -461,10 +461,10 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                   {reports.map((report, index) => (
                     <div
                       key={report.id}
-                      className={`group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors ${index !== reports.length - 1 ? 'border-b border-zinc-200 dark:border-zinc-700' : ''}`}
+                      className={`group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors ${index !== reports.length - 1 ? 'border-b border-zinc-200 dark:border-zinc-700' : ''}`}
                     >
-                      {/* Left: Date & ID */}
-                      <div className="min-w-[80px] sm:text-right">
+                      {/* Left: Date & ID (Mobile: Top Row) */}
+                      <div className="w-full sm:w-auto min-w-[80px] sm:text-right flex sm:block justify-between items-center sm:items-end mb-1 sm:mb-0">
                         <div className="text-xs font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                           {report.task_date ? new Date(report.task_date).toLocaleDateString('default', { day: '2-digit', month: 'short' }) : '--'}
                         </div>
@@ -528,9 +528,9 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                 {reports.map((report) => {
                   if (!report.issues && !report.next_action) return null;
                   return (
-                    <div key={'summary-' + report.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-200 dark:border-zinc-700 last:border-b-0">
+                    <div key={'summary-' + report.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-200 dark:border-zinc-700 last:border-b-0">
                       {/* Left: Ref & Date */}
-                      <div className="min-w-[80px] sm:text-right shrink-0">
+                      <div className="w-full sm:w-auto min-w-[80px] sm:text-right flex sm:block justify-between items-center sm:items-end shrink-0 mb-1 sm:mb-0">
                         <div className="text-xs font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                           {report.task_date ? new Date(report.task_date).toLocaleDateString('default', { day: '2-digit', month: 'short' }) : '--'}
                         </div>
@@ -571,9 +571,9 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
 
                 {/* 2. Manual Notes (Editable) */}
                 {notes.map((note) => (
-                  <div key={'note-' + note.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-200 dark:border-zinc-700 last:border-b-0">
+                  <div key={'note-' + note.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-200 dark:border-zinc-700 last:border-b-0">
                     {/* Left: Ref & Date */}
-                    <div className="min-w-[80px] sm:text-right shrink-0">
+                    <div className="w-full sm:w-auto min-w-[80px] sm:text-right flex sm:block justify-between items-center sm:items-end shrink-0 mb-1 sm:mb-0">
                       <div className="text-xs font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                         {new Date(note.created_at).toLocaleDateString('default', { day: '2-digit', month: 'short' })}
                       </div>

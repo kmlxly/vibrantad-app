@@ -3,7 +3,7 @@
 import { useActionState } from 'react'
 import { inviteStaff } from '@/app/actions/inviteStaff'
 import { useFormStatus } from 'react-dom'
-import { Loader2, Send, Shield, Mail, Briefcase, UserPlus } from 'lucide-react'
+import { Loader2, Send, Shield, Mail, Briefcase, UserPlus, User } from 'lucide-react'
 
 function SubmitButton() {
     const { pending } = useFormStatus()
@@ -108,6 +108,23 @@ export default function InviteStaffPage() {
                                 </div>
                             )}
 
+                            {/* Full Name Input */}
+                            <div className="space-y-1">
+                                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wide ml-1 text-black">
+                                    Nama Penuh (Full Name)
+                                </label>
+                                <div className="relative">
+                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                                    <input
+                                        type="text"
+                                        name="full_name"
+                                        required
+                                        placeholder="e.g. Ali Bin Abu"
+                                        className="w-full bg-zinc-50 border-4 border-black rounded-lg py-2.5 pl-10 pr-3 font-bold text-sm outline-none focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all placeholder:text-zinc-400 placeholder:font-medium text-black"
+                                    />
+                                </div>
+                            </div>
+
                             {/* Email Input */}
                             <div className="space-y-1">
                                 <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wide ml-1 text-black">
@@ -125,16 +142,16 @@ export default function InviteStaffPage() {
                                 </div>
                             </div>
 
-                            {/* Jawatan Input */}
+                            {/* Job Title Input */}
                             <div className="space-y-1">
                                 <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wide ml-1 text-black">
-                                    Jawatan (Position)
+                                    Jawatan (Job Title)
                                 </label>
                                 <div className="relative">
                                     <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                                     <input
                                         type="text"
-                                        name="position"
+                                        name="job_title"
                                         required
                                         placeholder="e.g. Graphic Designer"
                                         className="w-full bg-zinc-50 border-4 border-black rounded-lg py-2.5 pl-10 pr-3 font-bold text-sm outline-none focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all placeholder:text-zinc-400 placeholder:font-medium text-black"
@@ -152,12 +169,11 @@ export default function InviteStaffPage() {
                                     <select
                                         name="role"
                                         required
-                                        defaultValue="Staff"
+                                        defaultValue="userid"
                                         className="w-full bg-zinc-50 border-4 border-black rounded-lg py-2.5 pl-10 pr-3 font-bold text-sm outline-none focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all appearance-none cursor-pointer text-black relative z-0"
                                     >
-                                        <option value="Staff">Staff</option>
-                                        <option value="Manager">Manager</option>
-                                        <option value="Admin">Admin</option>
+                                        <option value="userid">User</option>
+                                        <option value="admin">Admin</option>
                                     </select>
                                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none z-10">
                                         <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-black"></div>

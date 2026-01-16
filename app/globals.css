@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
@@ -94,11 +96,11 @@
 
 .group:hover .hover-stripes {
   background-image: linear-gradient(45deg,
-      rgba(255, 255, 255, 0.2) 25%,
+      rgba(255, 255, 255, 0.4) 25%,
       transparent 25%,
       transparent 50%,
-      rgba(255, 255, 255, 0.2) 50%,
-      rgba(255, 255, 255, 0.2) 75%,
+      rgba(255, 255, 255, 0.4) 50%,
+      rgba(255, 255, 255, 0.4) 75%,
       transparent 75%,
       transparent);
   background-size: 1rem 1rem;
@@ -108,6 +110,21 @@
 :root {
   --background: #FBF7F0;
   --foreground: #000000;
+}
+
+.dark {
+  --background: #09090b;
+  /* zinc-950 */
+  --foreground: #ffffff;
+  --color-neo-bg: #09090b;
+  --color-neo-dark: #ffffff;
+  --color-neo-white: #18181b;
+  /* zinc-900 */
+
+  /* Invert shadows for visibility */
+  --shadow-neo: 4px 4px 0px 0px rgba(255, 255, 255, 0.9);
+  --shadow-neo-sm: 2px 2px 0px 0px rgba(255, 255, 255, 0.9);
+  --shadow-neo-lg: 8px 8px 0px 0px rgba(255, 255, 255, 0.9);
 }
 
 /* Reset asas supaya font nampak kemas */
@@ -121,23 +138,23 @@ body {
 
 @layer components {
   .neo-btn {
-    @apply border-2 border-black bg-neo-primary text-white font-black px-6 py-3 shadow-neo hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2;
+    @apply border-2 border-black dark:border-white bg-neo-primary text-white font-black px-6 py-3 shadow-neo hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2;
   }
 
   .neo-card {
-    @apply bg-white border-2 border-black rounded-neo shadow-neo p-6;
+    @apply bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-neo shadow-neo p-6;
   }
 
   .neo-box {
-    @apply bg-white border-2 border-black rounded-neo shadow-neo p-6;
+    @apply bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-neo shadow-neo p-6;
   }
 
   .neo-badge {
-    @apply border-2 border-black px-2 py-0.5 text-xs font-bold rounded-full;
+    @apply border-2 border-black dark:border-white px-2 py-0.5 text-xs font-bold rounded-full;
   }
 
   .neo-input {
-    @apply w-full bg-white border-2 border-black rounded-lg px-4 py-3 outline-none font-bold focus:shadow-neo focus:translate-x-[-2px] focus:translate-y-[-2px] transition-all placeholder:font-normal;
+    @apply w-full bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-lg px-4 py-3 outline-none font-bold focus:shadow-neo focus:translate-x-[-2px] focus:translate-y-[-2px] transition-all placeholder:font-normal dark:text-white;
   }
 }
 
@@ -154,4 +171,102 @@ body {
 ::-webkit-scrollbar-thumb {
   background: #FF6B6B;
   border: 2px solid black;
+}
+
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+
+  /* Just hide standard non-print helper classes */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Simple print layout resets */
+  .min-h-screen {
+    min-height: auto !important;
+    padding: 0 !important;
+  }
+
+  /* Ensure grid becomes block for stacking */
+  .grid {
+    display: block !important;
+  }
+
+  .lg\:col-span-8,
+  .lg\:col-span-4 {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* Remove shadows and borders for cleaner print */
+  .neo-card,
+  .shadow-neo,
+  .border-2,
+  .border-4 {
+    box-shadow: none !important;
+    border-width: 1px !important;
+    border-color: #000 !important;
+  }
+
+  /* --- COMPACT TIMELINE FOR PRINT --- */
+
+  /* Reduce gap between reports */
+  .gap-5 {
+    gap: 0.75rem !important;
+  }
+
+  /* Compact Card Padding */
+  .group.relative {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border-radius: 6px !important;
+  }
+
+  /* Compact Date Left Strip */
+  .group .bg-zinc-50 {
+    padding: 0.5rem !important;
+    width: 80px !important;
+  }
+
+  /* Smaller Date Text */
+  .group .bg-zinc-50 .text-4xl {
+    font-size: 1.25rem !important;
+  }
+
+  .group .bg-zinc-50 .tracking-widest {
+    font-size: 0.5rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+
+  /* Compact Content Area */
+  .group .p-6 {
+    padding: 0.75rem !important;
+  }
+
+  /* Smaller Title */
+  .group h3 {
+    font-size: 1rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+
+  /* Smaller & tighter Body Text */
+  .group .text-sm {
+    font-size: 0.75rem !important;
+    line-height: 1.3 !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Compact inner issue/action boxes */
+  .group .grid {
+    gap: 0.5rem !important;
+    padding-top: 0.5rem !important;
+    margin-top: 0 !important;
+  }
+
+  .group .grid .p-3 {
+    padding: 0.4rem !important;
+  }
 }

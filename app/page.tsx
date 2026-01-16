@@ -55,7 +55,7 @@ export default function LoginPage() {
       </div>
 
       {/* --- LOGIN CARD (LANYARD STYLE) --- */}
-      <div className="relative z-10 w-full max-w-sm mx-4 flex flex-col items-center animate-drop-in origin-top">
+      <div className="relative z-10 w-[92%] max-w-sm flex flex-col items-center animate-drop-in origin-top">
 
         {/* Lanyard Strap & Clip */}
         <div className="w-4 h-[100vh] bg-neo-primary border-x-4 border-black absolute bottom-full left-1/2 -translate-x-1/2 -mb-4 z-0"></div>
@@ -108,7 +108,7 @@ export default function LoginPage() {
                 <input
                   type="email"
                   required
-                  className="w-full bg-zinc-50 border-4 border-black rounded-lg p-2.5 font-bold text-sm outline-none focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all placeholder:text-zinc-400 placeholder:font-medium"
+                  className="w-full bg-zinc-50 border-4 border-black rounded-lg p-2.5 font-bold text-base outline-none focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all placeholder:text-zinc-400 placeholder:font-medium"
                   placeholder="username@vibrant.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -120,7 +120,7 @@ export default function LoginPage() {
                 <input
                   type="password"
                   required
-                  className="w-full bg-zinc-50 border-4 border-black rounded-lg p-2.5 font-bold text-sm outline-none focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all placeholder:text-zinc-400 placeholder:font-medium text-lg tracking-widest"
+                  className="w-full bg-zinc-50 border-4 border-black rounded-lg p-2.5 font-bold text-base outline-none focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all placeholder:text-zinc-400 placeholder:font-medium text-lg tracking-widest"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

@@ -2,7 +2,8 @@
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { LogOut, FolderPlus, Trash2, FolderOpen, User, Edit3, X, Check, Briefcase, Shield, Crown, Filter, Camera, Loader2, Building2, Calendar, Clock, ChevronDown } from 'lucide-react'
+import { LogOut, FolderPlus, Trash2, FolderOpen, User, Edit3, X, Check, Briefcase, Shield, Crown, Filter, Camera, Loader2, Building2, Calendar, Clock, ChevronDown, Sun, Moon } from 'lucide-react'
+import { useTheme } from '@/lib/ThemeProvider'
 
 // Define types
 type Profile = { id: string; full_name: string; job_title: string; role: string; company_name: string; avatar_url: string | null }
@@ -18,6 +19,7 @@ type Project = {
 
 export default function Dashboard() {
   const router = useRouter()
+  const { theme, toggleTheme } = useTheme()
 
   // Data States
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -260,7 +262,7 @@ export default function Dashboard() {
   const isAdmin = profile?.role === 'admin'
 
   return (
-    <div className="min-h-screen bg-neo-bg text-neo-dark font-sans p-4 sm:p-6 pb-20 max-w-7xl mx-auto">
+    <div className="min-h-screen bg-neo-bg text-neo-dark font-sans px-2 py-4 sm:px-6 pb-20 max-w-7xl mx-auto">
 
       {/* HEADER: Compact & Responsive */}
       <header className="mb-8">
@@ -269,7 +271,7 @@ export default function Dashboard() {
           {/* USER PROFILE CARD */}
           {/* USER PROFILE CARD - REDESIGNED */}
           {/* USER PROFILE CARD - COMPACT REDESIGN */}
-          <div className="lg:col-span-8 group relative bg-white border-2 border-black rounded-xl p-5 flex flex-col sm:flex-row items-center gap-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+          <div className="lg:col-span-8 group relative bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl p-3 sm:p-5 flex flex-col sm:flex-row items-center gap-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.5)] transition-all hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[10px_10px_0px_0px_rgba(255,255,255,0.8)] overflow-hidden">
 
             {/* Decorative Background Elements */}
             <div className="absolute top-0 right-0 w-48 h-48 bg-neo-yellow rounded-full mix-blend-multiply blur-3xl opacity-20 animate-pulse pointer-events-none transform translate-x-1/3 -translate-y-1/3"></div>
@@ -299,24 +301,24 @@ export default function Dashboard() {
               {/* Greeting & Name */}
               <div className="mb-1.5">
                 <div className="flex items-center justify-center sm:justify-start gap-1.5 mb-0.5 opacity-60">
-                  <div className="h-[2px] w-3 bg-black"></div>
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em]">HELLO</span>
+                  <div className="h-[2px] w-3 bg-black dark:bg-white"></div>
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-black dark:text-white">HELLO</span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black italic uppercase leading-none tracking-tighter text-black break-words w-full">
+                <h1 className="text-2xl sm:text-3xl font-black italic uppercase leading-none tracking-tighter text-black dark:text-white break-words w-full">
                   {profile?.full_name || 'Staff'}
                 </h1>
               </div>
 
               {/* Details Row */}
               <div className="flex flex-wrap justify-center sm:justify-start gap-2 w-full">
-                <div className="flex items-center gap-1.5 text-zinc-700 bg-zinc-100 px-2.5 py-1 rounded border border-zinc-200">
-                  <Briefcase size={12} className="text-zinc-400" />
+                <div className="flex items-center gap-1.5 text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 dark:border-zinc-600 px-2.5 py-1 rounded border border-zinc-300">
+                  <Briefcase size={12} className="text-zinc-600 dark:text-zinc-400" />
                   <span className="font-bold text-[10px] sm:text-xs uppercase tracking-wide">{profile?.job_title || 'Jawatan'}</span>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-black bg-neo-yellow px-2.5 py-1 rounded border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform -rotate-1 hover:rotate-0 transition-transform">
-                  <Building2 size={12} strokeWidth={2.5} />
-                  <span className="font-black text-[10px] sm:text-xs uppercase tracking-wide">
+                <div className="flex items-center gap-1.5 text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 dark:border-zinc-600 px-2.5 py-1 rounded border border-zinc-300">
+                  <Building2 size={12} className="text-zinc-600 dark:text-zinc-400" />
+                  <span className="font-bold text-[10px] sm:text-xs uppercase tracking-wide">
                     {profile?.company_name || 'Generic Corp'}
                   </span>
                 </div>
@@ -336,37 +338,46 @@ export default function Dashboard() {
           {/* STATS & ACTIONS SIDEBAR */}
           <div className="lg:col-span-4 flex flex-col sm:flex-row lg:flex-col gap-3">
             {/* Stats Card */}
-            <div className="neo-card bg-neo-dark text-white p-3 flex-1 flex flex-col justify-center items-center text-center relative overflow-hidden group min-h-[100px]">
+            <div className="neo-card bg-white dark:bg-zinc-900 text-black dark:text-white p-3 flex-1 flex flex-col justify-center items-center text-center relative overflow-hidden group min-h-[100px] border-2 border-black dark:border-white">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neo-primary to-neo-yellow"></div>
-              <div className="absolute -right-2 -bottom-2 text-6xl font-black text-white opacity-5 select-none leading-none z-0">{projects.length}</div>
+              <div className="absolute -right-2 -bottom-2 text-6xl font-black text-black dark:text-white opacity-5 select-none leading-none z-0">{projects.length}</div>
               <div className="relative z-10">
-                <h3 className="text-zinc-400 text-[9px] font-bold uppercase tracking-widest mb-0.5">
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-[9px] font-bold uppercase tracking-widest mb-0.5">
                   {selectedStaffId === 'all' ? 'Projek Pasukan' : 'Jumlah Paparan'}
                 </h3>
-                <div className="text-4xl font-black text-neo-yellow leading-none mb-0.5 group-hover:scale-110 transition-transform duration-300 drop-shadow-[2px_2px_0px_rgba(255,107,107,0.5)]">
+                <div className="text-4xl font-black text-black dark:text-white leading-none mb-0.5 group-hover:scale-110 transition-transform duration-300 drop-shadow-[2px_2px_0px_rgba(0,0,0,0.2)] dark:drop-shadow-[2px_2px_0px_rgba(255,255,255,0.2)]">
                   {projects.length}
                 </div>
               </div>
             </div>
 
             {/* Date/Time & Logout */}
-            <div className="neo-card bg-white p-3 flex-1 flex flex-col justify-center gap-2">
-              <div className="flex justify-between items-center border-b-2 border-zinc-100 pb-1.5 mb-0.5">
+            <div className="neo-card bg-white dark:bg-zinc-900 p-3 flex-1 flex flex-col justify-center gap-2">
+              <div className="flex justify-between items-center border-b-2 border-zinc-100 dark:border-zinc-800 pb-1.5 mb-0.5">
                 <div className="flex items-center gap-1.5">
-                  <Calendar size={12} className="text-black" />
-                  <span className="text-[10px] font-bold uppercase">{currentTime.toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                  <Calendar size={12} className="text-black dark:text-white" />
+                  <span className="text-[10px] font-bold uppercase dark:text-white">{currentTime.toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Clock size={12} className="text-neo-primary" />
-                  <span className="text-[10px] font-bold uppercase">{currentTime.toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="text-[10px] font-bold uppercase dark:text-white">{currentTime.toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
               </div>
               <button
                 onClick={handleLogout}
-                className="w-full group bg-white hover:bg-neo-primary hover:text-white border-2 border-black rounded-lg text-black font-black py-2.5 px-4 flex items-center justify-center gap-2 text-xs transition-all uppercase shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]"
+                className="w-full group bg-white hover:bg-neo-primary hover:text-white dark:bg-zinc-800 dark:text-white dark:border-white border-2 border-black rounded-lg text-black font-black py-2.5 px-4 flex items-center justify-center gap-2 text-xs transition-all uppercase shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.5)]"
               >
                 <LogOut size={14} strokeWidth={3} className="group-hover:translate-x-1 transition-transform duration-300" />
                 Log Keluar
+              </button>
+
+              {/* Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className="w-full group bg-black hover:bg-zinc-800 text-white border-2 border-black rounded-lg font-black py-2.5 px-4 flex items-center justify-center gap-2 text-xs transition-all uppercase shadow-[3px_3px_0px_0px_rgba(255,255,255,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.2)]"
+              >
+                {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+                {theme === 'light' ? 'Mod Gelap' : 'Mod Cerah'}
               </button>
             </div>
           </div>
@@ -375,30 +386,30 @@ export default function Dashboard() {
 
       {/* FILTER & ACTIONS TOOLBAR */}
       <div className="mb-8">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white border-2 border-black p-4 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-zinc-900 border-2 border-black dark:border-white p-3 sm:p-4 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.5)]">
           {/* Left Side */}
           <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
             <div className="flex items-center gap-3 w-full sm:w-auto">
-              <div className="bg-black text-white p-2.5 rounded-lg shrink-0"><FolderOpen size={20} /></div>
+              <div className="bg-white text-black border-2 border-black dark:bg-zinc-800 dark:text-white dark:border-zinc-700 p-2.5 rounded-lg shrink-0"><FolderOpen size={20} /></div>
               <div>
-                <h2 className="text-xl font-black uppercase italic leading-none">{isAdmin ? 'Pantau Projek' : 'Projek Saya'}</h2>
-                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mt-0.5">{isAdmin ? 'Mod Admin' : 'Paparan Staff'}</p>
+                <h2 className="text-xl font-black uppercase italic leading-none dark:text-white">{isAdmin ? 'Pantau Projek' : 'Projek Saya'}</h2>
+                <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mt-0.5">{isAdmin ? 'Mod Admin' : 'Paparan Staff'}</p>
               </div>
             </div>
             {isAdmin && (
               <div className="relative group w-full sm:w-auto mt-2 sm:mt-0">
-                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none"><Filter size={14} className="text-black group-hover:text-neo-primary transition-colors" /></div>
-                <select className="appearance-none w-full sm:w-64 bg-zinc-50 border-2 border-black pl-10 pr-10 py-2.5 font-bold text-xs uppercase rounded-lg cursor-pointer hover:bg-neo-yellow transition-colors outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" value={selectedStaffId} onChange={(e) => setSelectedStaffId(e.target.value)}>
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none"><Filter size={14} className="text-black group-hover:text-neo-primary transition-colors dark:text-white" /></div>
+                <select className="appearance-none w-full sm:w-64 bg-zinc-50 dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 pl-10 pr-10 py-2.5 font-bold text-xs uppercase rounded-lg cursor-pointer hover:bg-neo-yellow dark:hover:bg-zinc-700 transition-colors outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:text-white" value={selectedStaffId} onChange={(e) => setSelectedStaffId(e.target.value)}>
                   <option value="all">Semua Staff</option>
                   <option disabled>----------------</option>
                   {staffList.map((staff) => (<option key={staff.id} value={staff.id}>{staff.full_name}</option>))}
                 </select>
-                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none"><ChevronDown size={14} className="text-black" /></div>
+                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none"><ChevronDown size={14} className="text-black dark:text-white" /></div>
               </div>
             )}
           </div>
           {/* Right Side */}
-          <button onClick={() => setShowModal(true)} className="w-full md:w-auto bg-neo-primary text-white border-2 border-black px-6 py-2.5 font-black uppercase tracking-wide rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2 group">
+          <button onClick={() => setShowModal(true)} className="w-full md:w-auto bg-neo-primary text-white border-2 border-black dark:border-white px-6 py-2.5 font-black uppercase tracking-wide rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.5)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2 group">
             <FolderPlus size={18} className="group-hover:rotate-12 transition-transform" />
             <span>Tambah Projek</span>
           </button>
@@ -425,7 +436,7 @@ export default function Dashboard() {
             <div
               key={proj.id}
               onClick={() => router.push(`/dashboard/${proj.id}`)}
-              className="group relative flex flex-col justify-between h-full bg-white border-2 border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 hover:-translate-y-1 cursor-pointer overflow-hidden"
+              className="group relative flex flex-col justify-between h-full bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.5)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.8)] transition-all duration-300 hover:-translate-y-1 cursor-pointer overflow-hidden"
             >
               {/* Decorative Header Strip with Dynamic Color & Moving Stripes */}
               <div className={`h-3 w-full ${baseColorMap[proj.color || 'neo-yellow']} hover-stripes flex items-center justify-end px-2`}>
@@ -433,11 +444,11 @@ export default function Dashboard() {
               </div>
 
               {/* Main Content */}
-              <div className="p-5 flex-grow flex flex-col relative">
+              <div className="p-3 sm:p-5 flex-grow flex flex-col relative">
                 {/* Top Row: Actions */}
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex gap-2">
-                    <span className="font-mono text-[10px] font-black tracking-widest bg-zinc-100 px-2 py-1 rounded border border-black text-zinc-500">
+                    <span className="font-mono text-[10px] font-black tracking-widest bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded border border-black dark:border-zinc-600 text-zinc-500 dark:text-zinc-400">
                       #{proj.id.toString().padStart(3, '0')}
                     </span>
                     {/* Status Badge */}
@@ -454,7 +465,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="mb-4">
-                  <h3 className="text-2xl font-black uppercase leading-[1.1] mb-2 tracking-tight group-hover:underline decoration-2 underline-offset-2 decoration-black transition-all line-clamp-2">
+                  <h3 className="text-2xl font-black uppercase leading-[1.1] mb-2 tracking-tight group-hover:underline decoration-2 underline-offset-2 decoration-black dark:decoration-white transition-all line-clamp-2 dark:text-white">
                     {proj.name}
                   </h3>
                   <p className="text-sm font-medium text-zinc-500 line-clamp-3 leading-relaxed">
@@ -464,14 +475,14 @@ export default function Dashboard() {
               </div>
 
               {/* Footer Metadata */}
-              <div className="px-5 py-3 border-t-2 border-black bg-zinc-50 flex items-center justify-between gap-4 group-hover:bg-zinc-100 transition-colors">
+              <div className="px-5 py-3 border-t-2 border-black dark:border-white bg-zinc-50 dark:bg-zinc-800 flex items-center justify-between gap-4 group-hover:bg-zinc-100 dark:group-hover:bg-zinc-700 transition-colors">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-8 h-8 rounded-full border-2 border-black bg-zinc-200 overflow-hidden flex-shrink-0 shadow-sm">
                     {proj.profiles?.avatar_url ? <img src={proj.profiles.avatar_url} alt="Creator" className="w-full h-full object-cover" /> : <User size={16} className="w-full h-full p-1.5 text-black" />}
                   </div>
                   <div className="flex flex-col min-w-0">
                     <span className="text-[9px] font-bold uppercase text-zinc-400 leading-none mb-0.5 whitespace-nowrap">Created By</span>
-                    <span className="text-xs font-black uppercase text-black leading-none truncate w-full">{proj.profiles?.full_name?.split(' ')[0] || 'Unknown'}</span>
+                    <span className="text-xs font-black uppercase text-black dark:text-white leading-none truncate w-full">{proj.profiles?.full_name?.split(' ')[0] || 'Unknown'}</span>
                   </div>
                 </div>
               </div>
@@ -483,28 +494,28 @@ export default function Dashboard() {
       {/* MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg border-4 border-black rounded-xl shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] animate-in zoom-in-95 overflow-hidden">
-            <div className="flex justify-between items-center p-6 border-b-4 border-black">
-              <h3 className="text-3xl font-black uppercase italic tracking-tighter transform -skew-x-6">{editingProject ? 'Kemaskini Projek' : 'Projek Baru'}</h3>
-              <button onClick={resetModal} className="bg-red-100 hover:bg-red-500 hover:text-white border-2 border-transparent hover:border-black p-2 rounded-lg transition-all"><X size={20} /></button>
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-lg border-4 border-black dark:border-white rounded-xl shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.5)] animate-in zoom-in-95 overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b-4 border-black dark:border-white">
+              <h3 className="text-3xl font-black uppercase italic tracking-tighter transform -skew-x-6 dark:text-white">{editingProject ? 'Kemaskini Projek' : 'Projek Baru'}</h3>
+              <button onClick={resetModal} className="bg-red-100 hover:bg-red-500 hover:text-white border-2 border-transparent hover:border-black dark:hover:border-white p-2 rounded-lg transition-all"><X size={20} className="text-black" /></button>
             </div>
             <form onSubmit={handleAddProject} className="p-6 space-y-6">
               <div className="space-y-2">
-                <label className="block font-black text-xs uppercase tracking-wide ml-1">Nama Projek</label>
-                <input autoFocus required className="w-full bg-white border-2 border-black rounded-lg p-3 font-bold text-sm outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="Masukkan nama projek..." />
+                <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white">Nama Projek</label>
+                <input autoFocus required className="w-full bg-white dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 rounded-lg p-3 font-bold text-base outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.5)] focus:-translate-y-1 transition-all dark:text-white" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="Masukkan nama projek..." />
               </div>
               <div className="space-y-2">
-                <label className="block font-black text-xs uppercase tracking-wide ml-1">Deskripsi</label>
-                <textarea className="w-full bg-white border-2 border-black rounded-lg p-3 font-medium text-sm outline-none h-24 resize-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all" value={newProjectDesc} onChange={e => setNewProjectDesc(e.target.value)} placeholder="Terangkan serba sedikit mengenai projek ini..." />
+                <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white">Deskripsi</label>
+                <textarea className="w-full bg-white dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 rounded-lg p-3 font-medium text-base outline-none h-24 resize-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.5)] focus:-translate-y-1 transition-all dark:text-white" value={newProjectDesc} onChange={e => setNewProjectDesc(e.target.value)} placeholder="Terangkan serba sedikit mengenai projek ini..." />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 {/* Status Selection */}
                 <div className="space-y-2">
-                  <label className="block font-black text-xs uppercase tracking-wide ml-1">Status Projek</label>
+                  <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white">Status Projek</label>
                   <div className="relative">
                     <select
-                      className="w-full appearance-none bg-white border-2 border-black rounded-lg p-3 font-bold text-sm outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all cursor-pointer"
+                      className="w-full appearance-none bg-white dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 rounded-lg p-3 font-bold text-base outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.5)] focus:-translate-y-1 transition-all cursor-pointer dark:text-white"
                       value={newProjectStatus}
                       onChange={(e) => setNewProjectStatus(e.target.value)}
                     >
@@ -517,14 +528,14 @@ export default function Dashboard() {
 
                 {/* Color Selection */}
                 <div className="space-y-2">
-                  <label className="block font-black text-xs uppercase tracking-wide ml-1">Warna Kad</label>
+                  <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white">Warna Kad</label>
                   <div className="flex gap-2">
                     {colorOptions.map((c) => (
                       <button
                         type="button"
                         key={c.name}
                         onClick={() => setNewProjectColor(c.value)}
-                        className={`w-8 h-8 rounded-full border-2 border-black flex items-center justify-center transition-transform hover:scale-110 active:scale-95 ${newProjectColor === c.value ? 'ring-2 ring-offset-2 ring-black' : ''}`}
+                        className={`w-8 h-8 rounded-full border-2 border-black dark:border-white flex items-center justify-center transition-transform hover:scale-110 active:scale-95 ${newProjectColor === c.value ? 'ring-2 ring-offset-2 ring-black dark:ring-white' : ''}`}
                         style={{ backgroundColor: c.hex }}
                         title={c.name}
                       >

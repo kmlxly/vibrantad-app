@@ -2,7 +2,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { LogOut, FolderPlus, Trash2, FolderOpen, User, Edit3, X, Check, Briefcase, Shield, Crown, Filter, Camera, Loader2, Building2, Calendar, Clock, ChevronDown, Sun, Moon } from 'lucide-react'
+import { LogOut, FolderPlus, Trash2, FolderOpen, User, Edit3, X, Check, Briefcase, Shield, Crown, Filter, Camera, Loader2, Building2, Calendar, Clock, ChevronDown, Sun, Moon, UserPlus } from 'lucide-react'
 import { useTheme } from '@/lib/ThemeProvider'
 
 // Define types
@@ -70,33 +70,21 @@ export default function Dashboard() {
     const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single()
     setProfile(profileData)
 
-    // 3. Logic Fetch Projek
-    // Nota: Kita gunakan join ke table profiles untuk dapatkan full_name pencipta
-    let query = supabase
+    // 3. Logic Fetch Projek (Global View - All users see the same 'Client Folders')
+    const { data: projectData, error: projectError } = await supabase
       .from('projects')
       .select('*, profiles:user_id(full_name, avatar_url)')
       .order('created_at', { ascending: false })
 
-    if (profileData?.role === 'admin') {
-      // Admin View: Fetch all profiles for filtering if not already fetched
-      if (staffList.length === 0) {
-        const { data: allStaff } = await supabase.from('profiles').select('*').order('full_name', { ascending: true })
-        setStaffList(allStaff || [])
-      }
-      // Apply filter if a specific staff member is selected
-      if (selectedStaffId !== 'all') {
-        query = query.eq('user_id', selectedStaffId)
-      }
-    } else {
-      // User View: Strictly filter by their own ID
-      query = query.eq('user_id', user.id)
+    if (projectError) console.error('Error fetching projects:', projectError)
+    setProjects(projectData || [])
+
+    // Admin View: Fetch all profiles for filtering in the NEXT level if needed
+    if (profileData?.role === 'admin' && staffList.length === 0) {
+      const { data: allStaff } = await supabase.from('profiles').select('*').order('full_name', { ascending: true })
+      setStaffList(allStaff || [])
     }
 
-    const { data: projectData, error: projectError } = await query
-    if (projectError) console.error('Error fetching projects:', projectError)
-
-    // Fallback if columns don't exist yet to avoid crashes (optional safety)
-    setProjects(projectData || [])
     setLoading(false)
   }
 
@@ -392,27 +380,27 @@ export default function Dashboard() {
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <div className="bg-white text-black border-2 border-black dark:bg-zinc-800 dark:text-white dark:border-zinc-700 p-2.5 rounded-lg shrink-0"><FolderOpen size={20} /></div>
               <div>
-                <h2 className="text-xl font-black uppercase italic leading-none dark:text-white">{isAdmin ? 'Pantau Projek' : 'Projek Saya'}</h2>
-                <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mt-0.5">{isAdmin ? 'Mod Admin' : 'Paparan Staff'}</p>
+                <h2 className="text-xl font-black uppercase italic leading-none dark:text-white">Folder Projek Client</h2>
+                <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mt-0.5">Senarai Utama Client & Projek</p>
               </div>
             </div>
-            {isAdmin && (
-              <div className="relative group w-full sm:w-auto mt-2 sm:mt-0">
-                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none"><Filter size={14} className="text-black group-hover:text-neo-primary transition-colors dark:text-white" /></div>
-                <select className="appearance-none w-full sm:w-64 bg-zinc-50 dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 pl-10 pr-10 py-2.5 font-bold text-xs uppercase rounded-lg cursor-pointer hover:bg-neo-yellow dark:hover:bg-zinc-700 transition-colors outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:text-white" value={selectedStaffId} onChange={(e) => setSelectedStaffId(e.target.value)}>
-                  <option value="all">Semua Staff</option>
-                  <option disabled>----------------</option>
-                  {staffList.map((staff) => (<option key={staff.id} value={staff.id}>{staff.full_name}</option>))}
-                </select>
-                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none"><ChevronDown size={14} className="text-black dark:text-white" /></div>
-              </div>
-            )}
           </div>
           {/* Right Side */}
-          <button onClick={() => setShowModal(true)} className="w-full md:w-auto bg-neo-primary text-white border-2 border-black dark:border-white px-6 py-2.5 font-black uppercase tracking-wide rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.5)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2 group">
-            <FolderPlus size={18} className="group-hover:rotate-12 transition-transform" />
-            <span>Tambah Projek</span>
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            {isAdmin && (
+              <button
+                onClick={() => router.push('/admin/invite')}
+                className="w-full md:w-auto bg-black text-white border-2 border-black px-6 py-2.5 font-black uppercase tracking-wide rounded-lg shadow-[2px_2px_0px_0px_rgba(255,107,107,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2 group"
+              >
+                <UserPlus size={18} className="text-neo-primary group-hover:scale-110 transition-transform" />
+                <span>Urus Staff</span>
+              </button>
+            )}
+            <button onClick={() => setShowModal(true)} className="w-full md:w-auto bg-neo-primary text-white border-2 border-black dark:border-white px-6 py-2.5 font-black uppercase tracking-wide rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.5)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2 group">
+              <FolderPlus size={18} className="group-hover:rotate-12 transition-transform" />
+              <span>Tambah Projek</span>
+            </button>
+          </div>
         </div>
       </div>
 

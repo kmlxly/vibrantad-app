@@ -1,9 +1,11 @@
 'use client'
 
-import { useActionState } from 'react'
-import { inviteStaff } from '@/app/actions/inviteStaff'
+import { useEffect, useState, useActionState } from 'react'
+import { supabase } from '@/lib/supabaseClient'
+import { useRouter } from 'next/navigation'
 import { useFormStatus } from 'react-dom'
-import { Loader2, Send, Shield, Mail, Briefcase, UserPlus, User } from 'lucide-react'
+import { inviteStaff } from '@/app/actions/inviteStaff'
+import { Loader2, Send, Shield, Mail, Briefcase, UserPlus, User, ArrowLeft } from 'lucide-react'
 
 function SubmitButton() {
     const { pending } = useFormStatus()
@@ -27,7 +29,43 @@ function SubmitButton() {
 }
 
 export default function InviteStaffPage() {
+    const router = useRouter()
     const [state, action] = useActionState(inviteStaff, null)
+    const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)
+
+    useEffect(() => {
+        const checkAuth = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+
+            if (!user) {
+                router.push('/')
+                return
+            }
+
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single()
+
+            if (profile?.role !== 'admin') {
+                router.push('/dashboard')
+                return
+            }
+
+            setIsAuthorized(true)
+        }
+
+        checkAuth()
+    }, [router])
+
+    if (isAuthorized === null) {
+        return (
+            <div className="min-h-screen bg-neo-yellow flex items-center justify-center">
+                <Loader2 className="animate-spin w-10 h-10 text-black" />
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen w-full relative flex items-center justify-center overflow-hidden bg-neo-yellow selection:bg-black selection:text-white font-sans">
@@ -78,6 +116,15 @@ export default function InviteStaffPage() {
                     <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-neo-yellow rotate-45 border-t-4 border-l-4 border-black opacity-50 pointer-events-none"></div>
 
                     <div className="relative z-10 space-y-6">
+                        {/* Back Button */}
+                        <button
+                            onClick={() => router.push('/dashboard')}
+                            className="absolute -top-6 -left-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-zinc-400 hover:text-black transition-colors group"
+                        >
+                            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+                            Kembali
+                        </button>
+
 
                         {/* Header Section */}
                         <div className="text-center space-y-2">

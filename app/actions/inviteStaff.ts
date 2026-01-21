@@ -1,5 +1,6 @@
 'use server'
 
+import { createClient as createServerClient } from '@/lib/supabaseServer'
 import { createClient } from '@supabase/supabase-js'
 
 export async function inviteStaff(prevState: any, formData: FormData) {
@@ -9,17 +10,36 @@ export async function inviteStaff(prevState: any, formData: FormData) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-    if (!supabaseUrl) {
-        console.error('[InviteStaff] Error: NEXT_PUBLIC_SUPABASE_URL is missing')
-        return { error: 'Configuration Error: Missing Supabase URL' }
+    // 1. First check if the requester is an admin using server client with cookies
+    const authSupabase = await createServerClient()
+    const { data: { user: requester }, error: authError } = await authSupabase.auth.getUser()
+
+    if (authError || !requester) {
+        console.error('[InviteStaff] Auth Error:', authError)
+        return { error: 'Sesi tamat. Sila log masuk semula.' }
+    }
+
+    const { data: profile } = await authSupabase
+        .from('profiles')
+        .select('role')
+        .eq('id', requester.id)
+        .single()
+
+    if (profile?.role !== 'admin') {
+        return { error: 'Hanya Admin dibenarkan menghantar jemputan.' }
     }
 
     if (!supabaseServiceKey) {
         console.error('[InviteStaff] Error: SUPABASE_SERVICE_ROLE_KEY is missing')
-        return { error: 'Configuration Error: Missing Service Role Key' }
+        return { error: '⚠️ Configuration Error: Missing Service Role Key.' }
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabase = createClient(supabaseUrl!, supabaseServiceKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    })
 
     const email = formData.get('email') as string
     const fullName = formData.get('full_name') as string

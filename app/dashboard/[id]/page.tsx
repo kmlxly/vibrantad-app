@@ -518,11 +518,10 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
             {/* Back Button */}
             <button
               onClick={() => router.push('/dashboard')}
-
-              className="w-full sm:w-fit group flex items-center justify-center sm:justify-start gap-3 font-black uppercase text-xs tracking-wider bg-white hover:bg-black hover:text-neo-yellow border-2 border-black px-5 py-3 rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all dark:bg-zinc-900 dark:text-white dark:border-white dark:hover:bg-white dark:hover:text-black"
+              className="w-full sm:w-fit group flex items-center justify-center sm:justify-start gap-3 font-black uppercase text-xs tracking-wider bg-white hover:bg-black hover:text-neo-yellow border-2 border-black px-4 py-3 rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all dark:bg-zinc-900 dark:text-white dark:border-white dark:hover:bg-white dark:hover:text-black shrink-0"
             >
               <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-              Kembali ke Dashboard
+              Kembali
             </button>
 
             {/* Share & Print Actions */}
@@ -549,10 +548,10 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                 </div>
 
                 <div className="relative z-10">
-                  <span className="text-[10px] font-black uppercase tracking-widest bg-zinc-100 dark:bg-zinc-800 border border-black dark:border-zinc-700 text-black dark:text-white px-2 py-0.5 inline-block mb-3 rounded">
+                  <span className="text-[9px] font-black uppercase tracking-widest bg-zinc-100 dark:bg-zinc-800 border border-black dark:border-zinc-700 text-black dark:text-white px-2 py-0.5 inline-block mb-3 rounded">
                     Project ID: #{projectId}
                   </span>
-                  <h1 className="text-4xl font-black uppercase italic leading-[0.9] tracking-tighter mb-4 break-words text-black dark:text-white">
+                  <h1 className="text-3xl sm:text-4xl font-black uppercase italic leading-[0.9] tracking-tighter mb-4 break-words text-black dark:text-white">
                     {projectName || 'Loading...'}
                   </h1>
                 </div>
@@ -878,8 +877,8 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
               {/* List Header - HIDDEN ON PRINT */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-4 border-black dark:border-white pb-3 print:hidden">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-3xl font-black uppercase italic tracking-tighter dark:text-white">Timeline Laporan</h2>
-                  <div className="bg-black text-neo-yellow border-2 border-black dark:border-white px-4 py-1 font-black shadow-neo text-sm transform -rotate-1">
+                  <h2 className="text-2xl sm:text-3xl font-black uppercase italic tracking-tighter dark:text-white">Timeline Laporan</h2>
+                  <div className="bg-black text-neo-yellow border-2 border-black dark:border-white px-3 py-1 font-black shadow-neo text-xs sm:text-sm transform -rotate-1">
                     {reports.length} ITEMS
                   </div>
                 </div>
@@ -908,7 +907,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
               </div>
 
               {/* Tabs Filtering - HIDDEN ON PRINT */}
-              <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl w-full sm:w-fit border-2 border-black dark:border-white shadow-neo-sm print:hidden">
+              <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl w-full sm:w-fit border-2 border-black dark:border-white shadow-neo-sm print:hidden overflow-x-auto scrollbar-hide">
                 <button
                   onClick={() => setReportTypeTab('all')}
                   className={`flex-1 sm:flex-none px-6 py-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all ${reportTypeTab === 'all' ? 'bg-black text-white dark:bg-white dark:text-black shadow-neo-sm' : 'text-zinc-500 hover:text-black dark:hover:text-white'}`}
@@ -930,7 +929,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
               </div>
 
               {/* View Switcher - HIDDEN ON PRINT */}
-              <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl w-full sm:w-fit border-2 border-black dark:border-white shadow-neo-sm mt-2 print:hidden">
+              <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl w-full sm:w-fit border-2 border-black dark:border-white shadow-neo-sm mt-2 print:hidden overflow-x-auto scrollbar-hide">
                 <button
                   onClick={() => setViewMode('list')}
                   className={`flex items-center gap-2 px-4 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-black text-white dark:bg-white dark:text-black shadow-neo-sm' : 'text-zinc-500 hover:text-black dark:hover:text-white'}`}
@@ -1016,23 +1015,23 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                       <div
                         key={report.id}
                         onClick={() => setSelectedReport(report)}
-                        className={`group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer ${index !== filteredReports.length - 1 ? 'border-b border-zinc-200 dark:border-zinc-700' : ''}`}
+                        className={`group flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer ${index !== filteredReports.length - 1 ? 'border-b border-zinc-200 dark:border-zinc-700' : ''}`}
                       >
                         {/* Left: Date & ID (Mobile: Top Row) */}
-                        <div className="w-full sm:w-auto min-w-[100px] sm:text-right flex sm:block justify-between items-center sm:items-end mb-1 sm:mb-0">
-                          <div className="text-xs font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                        <div className="w-full sm:w-auto min-w-[90px] sm:text-right flex sm:block justify-between items-center sm:items-end mb-1 sm:mb-0">
+                          <div className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider leading-none">
                             {report.start_date ? new Date(report.start_date).toLocaleDateString('default', { day: '2-digit', month: 'short' }) : report.task_date ? new Date(report.task_date).toLocaleDateString('default', { day: '2-digit', month: 'short' }) : '--'}
                           </div>
-                          <div className="text-[10px] font-bold text-zinc-300 dark:text-zinc-600">
+                          <div className="text-[9px] font-bold text-zinc-300 dark:text-zinc-600 mt-0.5">
                             {report.end_date ? `Hingga ${new Date(report.end_date).toLocaleDateString('default', { day: '2-digit', month: 'short' })}` : `ID: #${report.id}`}
                           </div>
-                          {/* Creator Avatar */}
-                          <div className="mt-2 flex justify-end">
-                            <div className="w-8 h-8 rounded-full border-2 border-black bg-zinc-100 overflow-hidden flex items-center justify-center shadow-sm" title={Array.isArray(report.profiles) ? report.profiles[0]?.full_name : report.profiles?.full_name}>
+                          {/* Creator Avatar - More compact */}
+                          <div className="mt-1 flex justify-end">
+                            <div className="w-6 h-6 rounded-full border border-black bg-zinc-100 overflow-hidden flex items-center justify-center shadow-sm" title={Array.isArray(report.profiles) ? report.profiles[0]?.full_name : report.profiles?.full_name}>
                               {(Array.isArray(report.profiles) ? report.profiles[0]?.avatar_url : report.profiles?.avatar_url) ? (
                                 <img src={Array.isArray(report.profiles) ? report.profiles[0].avatar_url : report.profiles?.avatar_url} alt="Staff" className="w-full h-full object-cover" />
                               ) : (
-                                <User size={14} className="text-zinc-400" />
+                                <User size={12} className="text-zinc-400" />
                               )}
                             </div>
                           </div>
@@ -1040,24 +1039,24 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
 
                         {/* Middle: Content */}
                         <div className="flex-grow min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase border border-black ${report.type === 'task' ? 'bg-orange-400 text-black' : 'bg-blue-400 text-black'}`}>
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <span className={`px-1.5 py-0.5 rounded-[4px] text-[7px] font-black uppercase border border-black ${report.type === 'task' ? 'bg-orange-400 text-black' : 'bg-blue-400 text-black'}`}>
                               {report.type === 'task' ? 'AD-HOC' : 'PROJEK'}
                             </span>
-                            <h3 className="font-black text-sm uppercase leading-none dark:text-white truncate">
+                            <h3 className="font-black text-sm uppercase leading-none dark:text-white truncate pt-0.5">
                               {report.title}
                             </h3>
                           </div>
 
                           {/* Meta information row below title */}
-                          <div className="flex flex-wrap items-center gap-3 mt-1.5 mb-2 px-0.5">
-                            <span className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/50 px-2 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700/50">
-                              <MapPin size={10} className="text-neo-primary" /> {report.working_location || 'Office'}
+                          <div className="flex flex-wrap items-center gap-2 mt-1 mb-1.5 px-0.5">
+                            <span className="flex items-center gap-1 text-[9px] font-bold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/50 px-1.5 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700/50">
+                              <MapPin size={9} className="text-neo-primary" /> {report.working_location || 'Office'}
                             </span>
-                            <span className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/50 px-2 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700/50">
-                              <User size={10} className="text-blue-500" /> {Array.isArray(report.profiles) ? report.profiles[0]?.full_name?.split(' ')[0] : report.profiles?.full_name?.split(' ')[0] || 'Unknown'}
+                            <span className="flex items-center gap-1 text-[9px] font-bold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/50 px-1.5 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700/50">
+                              <User size={9} className="text-blue-500" /> {Array.isArray(report.profiles) ? report.profiles[0]?.full_name?.split(' ')[0] : report.profiles?.full_name?.split(' ')[0] || 'Unknown'}
                             </span>
-                            <span className={`text-[9px] font-black uppercase tracking-tight px-2 py-0.5 rounded border ${report.status === 'Done' ? 'bg-green-100 text-green-700 border-green-200' : report.status === 'Blocked' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'}`}>
+                            <span className={`text-[8px] font-black uppercase tracking-tight px-1.5 py-0.5 rounded border ${report.status === 'Done' ? 'bg-green-100 text-green-700 border-green-200' : report.status === 'Blocked' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'}`}>
                               {report.status}
                             </span>
                             {/* Verification Badge */}
@@ -1065,8 +1064,8 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                               const approvedReq = findApprovedRequest(report.user_id, report.task_date || report.start_date, report.working_location);
                               if (approvedReq) {
                                 return (
-                                  <span className="flex items-center gap-1 text-[8px] font-black uppercase bg-green-500 text-white px-2 py-0.5 rounded-full shadow-sm animate-pulse border border-black/10" title={`Alasan: ${approvedReq.reason}`}>
-                                    <ShieldCheck size={10} /> Verified {report.working_location}
+                                  <span className="flex items-center gap-1 text-[8px] font-black uppercase bg-green-500 text-white px-1.5 py-0.5 rounded-full shadow-sm animate-pulse border border-black/10" title={`Alasan: ${approvedReq.reason}`}>
+                                    <ShieldCheck size={9} /> Verified
                                   </span>
                                 );
                               }
@@ -1074,12 +1073,12 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                             })()}
                             {/* Attachment Badge */}
                             {report.attachment_url && (
-                              <span className="flex items-center gap-1 text-[8px] font-black uppercase bg-neo-yellow text-black px-2 py-0.5 rounded-full border border-black shadow-sm">
-                                <Paperclip size={10} /> {report.attachment_name === 'Link' ? 'LINK' : 'FILE'}
+                              <span className="flex items-center gap-1 text-[8px] font-black uppercase bg-neo-yellow text-black px-1.5 py-0.5 rounded-full border border-black shadow-sm">
+                                <Paperclip size={9} /> {report.attachment_name === 'Link' ? 'LINK' : 'FILE'}
                               </span>
                             )}
                           </div>
-                          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 line-clamp-1">
+                          <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 line-clamp-1 leading-tight">
                             {report.outcome}
                           </p>
                         </div>

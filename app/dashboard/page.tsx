@@ -388,6 +388,7 @@ export default function Dashboard() {
   )
 
   const isAdmin = profile?.role?.toLowerCase() === 'admin'
+  const isHR = profile?.role?.toLowerCase() === 'hr'
 
   return (
     <div className="min-h-screen bg-neo-bg text-neo-dark font-sans !px-3 py-4 md:p-6 w-full max-w-7xl mx-auto pb-10">
@@ -438,19 +439,25 @@ export default function Dashboard() {
               <div className="bg-neo-primary p-2.5 rounded-lg border-2 border-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"><FolderOpen size={24} /></div>
             </div>
 
-            <div className="bg-black text-white p-4 rounded-xl flex items-center justify-between shadow-[4px_4px_0px_0px_rgba(253,224,71,1)]">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black uppercase text-zinc-500">{currentTime.toLocaleDateString('ms-MY', { weekday: 'long' })}</span>
-                <span className="text-xl font-black italic uppercase leading-none">{currentTime.toLocaleDateString('ms-MY', { day: '2-digit', month: 'short' })}</span>
+            <div className="bg-black text-white p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between shadow-[4px_4px_0px_0px_rgba(253,224,71,1)] gap-4 sm:gap-0">
+              <div className="flex flex-row sm:flex-col justify-between w-full sm:w-auto items-center sm:items-start">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase text-zinc-500">{currentTime.toLocaleDateString('ms-MY', { weekday: 'long' })}</span>
+                  <span className="text-xl font-black italic uppercase leading-none">{currentTime.toLocaleDateString('ms-MY', { day: '2-digit', month: 'short' })}</span>
+                </div>
+                {/* Mobile only time display moved here if needed, or keep separate */}
+                <span className="text-2xl font-black sm:hidden">{currentTime.toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
-              <div className="text-right">
+
+              <div className="text-right hidden sm:block">
                 <span className="text-2xl font-black">{currentTime.toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
-              <div className="flex gap-2">
-                <button onClick={toggleTheme} className="bg-white text-black p-2 rounded-lg hover:bg-neo-yellow transition-colors">
+
+              <div className="flex gap-2 w-full sm:w-auto justify-end">
+                <button onClick={toggleTheme} className="bg-white text-black p-2 rounded-lg hover:bg-neo-yellow transition-colors flex-1 sm:flex-none justify-center flex">
                   {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
                 </button>
-                <button onClick={handleLogout} className="bg-white text-black p-2 rounded-lg hover:bg-neo-primary hover:text-white transition-colors">
+                <button onClick={handleLogout} className="bg-white text-black p-2 rounded-lg hover:bg-neo-primary hover:text-white transition-colors flex-1 sm:flex-none justify-center flex">
                   <LogOut size={20} />
                 </button>
               </div>
@@ -460,19 +467,19 @@ export default function Dashboard() {
       </header>
 
       {/* DASHBOARD TABS */}
-      <div className="flex gap-2 mb-8 bg-zinc-100 dark:bg-zinc-800 p-1.5 rounded-2xl w-fit">
+      <div className="flex gap-2 mb-8 bg-zinc-100 dark:bg-zinc-800 p-1.5 rounded-2xl w-full sm:w-fit overflow-x-auto scrollbar-hide">
         <button
           onClick={() => setActiveTab('projects')}
-          className={`px-6 py-3 rounded-xl font-black uppercase text-xs transition-all flex items-center gap-2 ${activeTab === 'projects' ? 'bg-black text-white shadow-lg' : 'text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+          className={`px-6 py-3 rounded-xl font-black uppercase text-xs transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'projects' ? 'bg-black text-white shadow-lg' : 'text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
         >
           <FolderOpen size={16} /> Projek Client
         </button>
         <button
           onClick={() => setActiveTab('working')}
-          className={`px-6 py-3 rounded-xl font-black uppercase text-xs transition-all flex items-center gap-2 relative ${activeTab === 'working' ? 'bg-black text-white shadow-lg' : 'text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+          className={`px-6 py-3 rounded-xl font-black uppercase text-xs transition-all flex items-center gap-2 relative whitespace-nowrap ${activeTab === 'working' ? 'bg-black text-white shadow-lg' : 'text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
         >
           <MapPin size={16} /> Log Lokasi
-          {isAdmin ? (
+          {isAdmin || isHR ? (
             workingRequests.filter(r => r.status === 'pending').length > 0 && (
               <span className="absolute -top-2 -right-2 bg-neo-primary text-white text-[9px] min-w-[18px] h-[18px] flex items-center justify-center rounded-full border-2 border-white dark:border-zinc-900 font-black px-1 animate-pulse">
                 {workingRequests.filter(r => r.status === 'pending').length}
@@ -593,23 +600,23 @@ export default function Dashboard() {
               <div className="bg-black text-white p-3 rounded-xl"><Calendar size={24} /></div>
               <div>
                 <h2 className="text-2xl font-black uppercase italic dark:text-white">
-                  {isAdmin ? 'Log Lokasi Staff' : 'Status Permohonan Saya'}
+                  {isAdmin || isHR ? 'Log Lokasi Staff' : 'Status Permohonan Saya'}
                 </h2>
                 <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
-                  {isAdmin ? 'Status Kehadiran Luar Pejabat' : 'Rekod dan maklumbalas permohonan lokasi'}
+                  {isAdmin || isHR ? 'Status Kehadiran Luar Pejabat' : 'Rekod dan maklumbalas permohonan lokasi'}
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {workingRequests.filter(r => isAdmin ? true : r.user_id === profile?.id).length === 0 ? (
+              {workingRequests.filter(r => (isAdmin || isHR) ? true : r.user_id === profile?.id).length === 0 ? (
                 <div className="col-span-full py-20 text-center border-4 border-dashed border-zinc-200 rounded-3xl bg-white dark:bg-zinc-900/50">
                   <MapPin size={48} className="mx-auto text-zinc-200 mb-4" />
                   <p className="font-black text-zinc-400 uppercase tracking-widest">Tiada rekod data dijumpai.</p>
                 </div>
               ) : (
                 workingRequests
-                  .filter(r => isAdmin ? true : r.user_id === profile?.id)
+                  .filter(r => (isAdmin || isHR) ? true : r.user_id === profile?.id)
                   .map((req) => (
                     <div key={req.id} className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-2xl p-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-4">
                       <div className="flex justify-between items-start">

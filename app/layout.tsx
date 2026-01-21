@@ -3,7 +3,8 @@ import { Public_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/lib/ThemeProvider";
 
-import SessionChecker from "@/components/SessionChecker";
+import { Viewport } from "next";
+
 
 const publicSans = Public_Sans({
   subsets: ["latin"],
@@ -13,7 +14,23 @@ const publicSans = Public_Sans({
 
 export const metadata: Metadata = {
   title: "Vibrant Staff App",
-  description: "Sistem Pengurusan Tugasan",
+  description: "Sistem Pengurusan Tugasan & Laporan",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Vibrant Staff",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FBF7F0" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false, // Apps usually don't zoom
 };
 
 export default function RootLayout({

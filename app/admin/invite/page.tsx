@@ -216,10 +216,11 @@ export default function InviteStaffPage() {
                                     <select
                                         name="role"
                                         required
-                                        defaultValue="userid"
+                                        defaultValue="user"
                                         className="w-full bg-zinc-50 border-4 border-black rounded-lg py-2.5 pl-10 pr-3 font-bold text-sm outline-none focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all appearance-none cursor-pointer text-black relative z-0"
                                     >
-                                        <option value="userid">User</option>
+                                        <option value="user">User</option>
+                                        <option value="hr">HR (Human Resources)</option>
                                         <option value="admin">Admin</option>
                                     </select>
                                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none z-10">

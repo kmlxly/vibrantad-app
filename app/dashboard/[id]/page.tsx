@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useState, use, useRef } from 'react' // Import 'use' for params handling in Next 15/14
+import imageCompression from 'browser-image-compression'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, PlusCircle, Save, Calendar, CheckCircle2, AlertCircle, Rocket, X, FileText, ClipboardList, Edit3, Trash2, Printer, Share2, Filter, ChevronDown, User, LayoutList, LayoutGrid, Layout, MapPin, MessageSquare, Send, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, PlusCircle, Save, Calendar, CheckCircle2, AlertCircle, Rocket, X, FileText, ClipboardList, Edit3, Trash2, Printer, Share2, Filter, ChevronDown, User, LayoutList, LayoutGrid, Layout, MapPin, MessageSquare, Send, ShieldCheck, Paperclip, Link, ExternalLink, RefreshCw } from 'lucide-react'
 
 // Types
 type Report = {
@@ -19,6 +20,8 @@ type Report = {
   next_action: string;
   user_id: string;
   profiles?: any;
+  attachment_url?: string;
+  attachment_name?: string;
 }
 type ReportComment = {
   id: number;
@@ -69,8 +72,11 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
   const [showForm, setShowForm] = useState(false)
   const [editingReport, setEditingReport] = useState<Report | null>(null)
   const [formData, setFormData] = useState({
-    title: '', status: 'In Progress', type: 'project', working_location: 'Office', start_date: '', end_date: '', task_date: '', outcome: '', issues: '', next_action: ''
+    title: '', status: 'In Progress', type: 'project', working_location: 'Office', start_date: '', end_date: '', task_date: '', outcome: '', issues: '', next_action: '',
+    attachment_url: '', attachment_name: ''
   })
+  const [file, setFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
   // Note Modal State
   const [showNoteModal, setShowNoteModal] = useState(false)
@@ -253,42 +259,101 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsUploading(true)
 
-    if (editingReport) {
-      const { error } = await supabase.from('reports').update({
-        ...formData
-      }).eq('id', editingReport.id)
+    try {
+      let finalAttachmentUrl = formData.attachment_url
+      let finalAttachmentName = formData.attachment_name
 
-      if (!error) {
-        setShowForm(false)
-        setEditingReport(null)
-        setFormData({ title: '', status: 'In Progress', type: 'project', working_location: 'Office', start_date: '', end_date: '', task_date: '', outcome: '', issues: '', next_action: '' })
-        await fetchProjectData()
-      } else {
-        alert("Error: " + error.message)
+      // 1. Handle File Upload if exists
+      if (file) {
+        // Limit 100MB check
+        if (file.size > 100 * 1024 * 1024) {
+          throw new Error("File terlalu besar. Had maksimum ialah 100MB.")
+        }
+
+        let fileToUpload = file
+
+        // Image Compression for space optimization
+        if (file.type.startsWith('image/')) {
+          const options = {
+            maxSizeMB: 1, // Compress target to ~1MB
+            maxWidthOrHeight: 1920,
+            useWebWorker: true,
+          }
+          try {
+            fileToUpload = await imageCompression(file, options)
+          } catch (err) {
+            console.error("Compression error:", err)
+            // If compression fails, we just upload original
+          }
+        }
+
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${Math.random()}.${fileExt}`
+        const filePath = `${projectId}/${userId}/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('attachments')
+          .upload(filePath, fileToUpload)
+
+        if (uploadError) throw uploadError
+
+        const { data: publicUrlData } = supabase.storage.from('attachments').getPublicUrl(filePath)
+        finalAttachmentUrl = publicUrlData.publicUrl
+        finalAttachmentName = file.name
       }
-    } else {
-      const { error } = await supabase.from('reports').insert([{
-        project_id: projectId,
-        user_id: userId,
-        ...formData
-      }])
 
-      if (!error) {
-        // Clear Draft
-        localStorage.removeItem(STORAGE_KEY)
-
-        setShowForm(false)
-        setFormData({ title: '', status: 'In Progress', type: 'project', working_location: 'Office', start_date: '', end_date: '', task_date: '', outcome: '', issues: '', next_action: '' })
-        await fetchProjectData()
-
-        // Auto-scroll ke senarai laporan
-        setTimeout(() => {
-          listRef.current?.scrollIntoView({ behavior: 'smooth' })
-        }, 100)
-      } else {
-        alert("Error: " + error.message)
+      // 2. Sanitasi data: Tukar string kosong kepada null untuk kolum jenis DATE
+      const cleanData = {
+        ...formData,
+        attachment_url: finalAttachmentUrl,
+        attachment_name: finalAttachmentName,
+        start_date: formData.start_date || null,
+        end_date: formData.end_date || null,
+        task_date: formData.task_date || null,
       }
+
+      if (editingReport) {
+        const { error } = await supabase.from('reports').update(cleanData).eq('id', editingReport.id)
+
+        if (!error) {
+          setShowForm(false)
+          setEditingReport(null)
+          setFormData({ title: '', status: 'In Progress', type: 'project', working_location: 'Office', start_date: '', end_date: '', task_date: '', outcome: '', issues: '', next_action: '', attachment_url: '', attachment_name: '' })
+          setFile(null)
+          await fetchProjectData()
+        } else {
+          throw error
+        }
+      } else {
+        const { error } = await supabase.from('reports').insert([{
+          project_id: projectId,
+          user_id: userId,
+          ...cleanData
+        }])
+
+        if (!error) {
+          // Clear Draft
+          localStorage.removeItem(STORAGE_KEY)
+
+          setShowForm(false)
+          setFormData({ title: '', status: 'In Progress', type: 'project', working_location: 'Office', start_date: '', end_date: '', task_date: '', outcome: '', issues: '', next_action: '', attachment_url: '', attachment_name: '' })
+          setFile(null)
+          await fetchProjectData()
+
+          // Auto-scroll ke senarai laporan
+          setTimeout(() => {
+            listRef.current?.scrollIntoView({ behavior: 'smooth' })
+          }, 100)
+        } else {
+          throw error
+        }
+      }
+    } catch (error: any) {
+      alert("Error: " + error.message)
+    } finally {
+      setIsUploading(false)
     }
   }
 
@@ -304,8 +369,11 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
       task_date: report.task_date || '',
       outcome: report.outcome,
       issues: report.issues || '',
-      next_action: report.next_action || ''
+      next_action: report.next_action || '',
+      attachment_url: report.attachment_url || '',
+      attachment_name: report.attachment_name || ''
     })
+    setFile(null)
     setShowForm(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -508,7 +576,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                       if (showForm) {
                         setShowForm(false);
                         setEditingReport(null);
-                        setFormData({ title: '', status: 'In Progress', type: 'project', working_location: 'Office', start_date: '', end_date: '', task_date: '', outcome: '', issues: '', next_action: '' });
+                        setFormData({ title: '', status: 'In Progress', type: 'project', working_location: 'Office', start_date: '', end_date: '', task_date: '', outcome: '', issues: '', next_action: '', attachment_url: '', attachment_name: '' });
                       } else {
                         setShowForm(true);
                       }
@@ -549,7 +617,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                     onClick={() => {
                       setShowForm(false);
                       setEditingReport(null);
-                      setFormData({ title: '', status: 'In Progress', type: 'project', working_location: 'Office', start_date: '', end_date: '', task_date: '', outcome: '', issues: '', next_action: '' });
+                      setFormData({ title: '', status: 'In Progress', type: 'project', working_location: 'Office', start_date: '', end_date: '', task_date: '', outcome: '', issues: '', next_action: '', attachment_url: '', attachment_name: '' });
                     }}
                     className="bg-black text-white dark:bg-white dark:text-black p-2 rounded-lg border-2 border-black dark:border-white hover:scale-110 active:scale-95 transition-all shadow-neo-sm"
                     title="Tutup Borang"
@@ -592,15 +660,21 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                         <label className="flex items-center gap-2 font-black text-xs uppercase tracking-wide ml-1 dark:text-white">
                           <Filter size={14} className="text-zinc-400" /> Jenis Laporan
                         </label>
-                        <div className="flex gap-4">
-                          <label className="flex items-center gap-2 cursor-pointer bg-zinc-50 dark:bg-zinc-800 p-3 rounded-lg border-2 border-transparent has-[:checked]:border-black dark:has-[:checked]:border-white has-[:checked]:bg-blue-50 dark:has-[:checked]:bg-blue-900/20 flex-1 transition-all group">
-                            <input type="radio" name="reportType" value="project" checked={formData.type === 'project'} onChange={() => setFormData({ ...formData, type: 'project' })} className="accent-blue-500 w-4 h-4" />
-                            <span className="font-bold text-xs uppercase dark:text-white group-hover:translate-x-1 transition-transform">Projek</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer bg-zinc-50 dark:bg-zinc-800 p-3 rounded-lg border-2 border-transparent has-[:checked]:border-black dark:has-[:checked]:border-white has-[:checked]:bg-orange-50 dark:has-[:checked]:bg-orange-900/20 flex-1 transition-all group">
-                            <input type="radio" name="reportType" value="task" checked={formData.type === 'task'} onChange={() => setFormData({ ...formData, type: 'task' })} className="accent-orange-500 w-4 h-4" />
-                            <span className="font-bold text-xs uppercase dark:text-white group-hover:translate-x-1 transition-transform">Ad-hoc</span>
-                          </label>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, type: 'project' })}
+                            className={`flex-1 py-2.5 rounded-lg border-2 font-bold text-[10px] uppercase tracking-wider transition-all ${formData.type === 'project' ? 'bg-blue-500 text-white border-black shadow-neo-sm -translate-y-0.5' : 'bg-zinc-50 text-zinc-400 border-zinc-100 dark:bg-zinc-800 dark:border-zinc-700'}`}
+                          >
+                            Projek Utama
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, type: 'task' })}
+                            className={`flex-1 py-2.5 rounded-lg border-2 font-bold text-[10px] uppercase tracking-wider transition-all ${formData.type === 'task' ? 'bg-orange-500 text-white border-black shadow-neo-sm -translate-y-0.5' : 'bg-zinc-50 text-zinc-400 border-zinc-100 dark:bg-zinc-800 dark:border-zinc-700'}`}
+                          >
+                            Tugasan Ad-hoc
+                          </button>
                         </div>
                       </div>
 
@@ -620,7 +694,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                     </div>
                   </div>
 
-                  {/* SECTION 2: MASA & STATUS */}
+                  {/* SECTION 2: MASA & PROGRES */}
                   <div className="space-y-6">
                     <div className="flex items-center justify-between border-b-2 border-zinc-100 dark:border-zinc-800 pb-3">
                       <div className="flex items-center gap-3">
@@ -671,7 +745,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                     </div>
                   </div>
 
-                  {/* SECTION 3: HASIL & ISU */}
+                  {/* SECTION 3: HASIL & LAMPIRAN */}
                   <div className="space-y-6">
                     <div className="flex items-center justify-between border-b-2 border-zinc-100 dark:border-zinc-800 pb-3">
                       <div className="flex items-center gap-3">
@@ -679,8 +753,8 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                           <Rocket size={20} className="text-neo-primary" />
                         </div>
                         <div>
-                          <h4 className="font-black text-sm uppercase tracking-widest dark:text-white">Hasil & Tindakan</h4>
-                          <p className="text-[10px] font-medium text-zinc-400 uppercase">Impak kerja dan langkah seterusnya</p>
+                          <h4 className="font-black text-sm uppercase tracking-widest dark:text-white">Hasil & Lampiran</h4>
+                          <p className="text-[10px] font-medium text-zinc-400 uppercase">Impak kerja dan fail rujukan</p>
                         </div>
                       </div>
                     </div>
@@ -723,12 +797,84 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                           />
                         </div>
                       </div>
+
+                      {/* LAMPIRAN FIELDS */}
+                      <div className="bg-neo-yellow/10 border-2 border-neo-yellow/30 p-4 rounded-xl mb-2">
+                        <p className="text-[10px] font-black uppercase text-neo-primary flex items-center gap-2">
+                          <AlertCircle size={14} /> Nota Penting: Penjimatan Ruang
+                        </p>
+                        <p className="text-[10px] font-bold text-zinc-500 mt-1 uppercase leading-relaxed">
+                          Sangat disarankan untuk menggunakan <span className="text-black dark:text-white underline">Google Drive, Canva, atau Figma</span> dan letak <span className="text-black dark:text-white underline">Pautan (Link)</span> sahaja bagi menjimatkan ruang simpanan sistem.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t-2 border-zinc-100 dark:border-zinc-800">
+                        <div className="space-y-2">
+                          <label className="flex items-center gap-2 font-black text-xs uppercase tracking-wide ml-1 dark:text-white">
+                            <Paperclip size={14} className="text-zinc-400" /> Upload File
+                          </label>
+                          <div className="relative group">
+                            <input
+                              type="file"
+                              className="hidden"
+                              id="report-file"
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) {
+                                  setFile(e.target.files[0])
+                                  setFormData({ ...formData, attachment_url: '' })
+                                }
+                              }}
+                            />
+                            <label
+                              htmlFor="report-file"
+                              className="flex items-center justify-center gap-3 w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-dashed border-black dark:border-zinc-700 py-6 rounded-xl cursor-pointer group-hover:bg-zinc-100 dark:group-hover:bg-zinc-700 transition-all"
+                            >
+                              {file ? (
+                                <div className="flex flex-col items-center gap-1">
+                                  <CheckCircle2 size={24} className="text-green-500" />
+                                  <span className="text-[10px] font-black uppercase text-zinc-500 max-w-[150px] truncate">{file.name}</span>
+                                  <button type="button" onClick={(e) => { e.preventDefault(); setFile(null); }} className="text-[8px] font-bold text-red-500 uppercase hover:underline">Padam</button>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col items-center gap-1">
+                                  <PlusCircle size={24} className="text-zinc-300" />
+                                  <span className="text-[10px] font-black uppercase text-zinc-400">Pilih File...</span>
+                                </div>
+                              )}
+                            </label>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="flex items-center gap-2 font-black text-xs uppercase tracking-wide ml-1 dark:text-white">
+                            <Link size={14} className="text-zinc-400" /> Ataupun Letak Link
+                          </label>
+                          <div className="relative">
+                            <input
+                              className="w-full bg-white dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 rounded-lg pl-3 pr-3 py-3 font-bold text-sm outline-none focus:shadow-neo-sm transition-all dark:text-white"
+                              placeholder="https://..."
+                              value={formData.attachment_url}
+                              disabled={!!file}
+                              onChange={e => setFormData({ ...formData, attachment_url: e.target.value, attachment_name: e.target.value ? 'Link' : '' })}
+                            />
+                          </div>
+                          <p className="text-[9px] font-bold text-zinc-400 uppercase italic px-1">Drive, Figma, YouTube, dll.</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
                   <div className="flex justify-end pt-4 border-t-4 border-black/10 dark:border-white/10">
-                    <button type="submit" className="bg-neo-primary hover:brightness-110 text-white border-2 border-black dark:border-white font-black uppercase tracking-wide px-8 py-3.5 rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.5)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center gap-2">
-                      <Save size={18} /> Simpan Laporan
+                    <button
+                      type="submit"
+                      disabled={isUploading}
+                      className="bg-neo-primary hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed text-white border-2 border-black dark:border-white font-black uppercase tracking-wide px-8 py-3.5 rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.5)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center gap-2"
+                    >
+                      {isUploading ? (
+                        <><RefreshCw size={18} className="animate-spin" /> Sedang Menyimpan...</>
+                      ) : (
+                        <><Save size={18} /> Simpan Laporan</>
+                      )}
                     </button>
                   </div>
                 </form>
@@ -848,6 +994,13 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                         </div>
                       )}
 
+                      {report.attachment_url && (
+                        <div>
+                          <h4 className="text-[10px] font-black uppercase text-zinc-400 mb-1 tracking-widest">D. Lampiran / Pautan</h4>
+                          <p className="text-[10px] font-bold text-blue-600">{report.attachment_name || 'Lihat Lampiran'}: {report.attachment_url}</p>
+                        </div>
+                      )}
+
                       <div className="mt-2 pt-2 border-t border-zinc-100 flex justify-between items-center">
                         <span className="text-[9px] font-bold text-zinc-400 uppercase">Disediakan Oleh: {Array.isArray(report.profiles) ? report.profiles[0]?.full_name : report.profiles?.full_name}</span>
                         <span className="text-[9px] font-medium text-zinc-300 italic">Vibrant Staff System — Auto Generated</span>
@@ -927,6 +1080,12 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                               }
                               return null;
                             })()}
+                            {/* Attachment Badge */}
+                            {report.attachment_url && (
+                              <span className="flex items-center gap-1 text-[8px] font-black uppercase bg-neo-yellow text-black px-2 py-0.5 rounded-full border border-black shadow-sm">
+                                <Paperclip size={10} /> {report.attachment_name === 'Link' ? 'LINK' : 'FILE'}
+                              </span>
+                            )}
                           </div>
                           <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 line-clamp-1">
                             {report.outcome}
@@ -1004,6 +1163,11 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                                         }
                                         return null;
                                       })()}
+                                      {report.attachment_url && (
+                                        <span className="flex items-center gap-1 text-[7px] font-black uppercase bg-neo-yellow text-black px-1.5 py-0.5 rounded-full border border-black shadow-neo-sm">
+                                          <Paperclip size={8} /> {report.attachment_name === 'Link' ? 'LINK' : 'FILE'}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
@@ -1103,6 +1267,11 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                             <span className="flex items-center gap-1.5 text-[9px] font-bold text-zinc-400 dark:text-zinc-500 bg-zinc-50 dark:bg-zinc-800/50 px-2 py-0.5 rounded-full border border-zinc-100 dark:border-zinc-700/50">
                               <User size={10} /> {Array.isArray(report.profiles) ? report.profiles[0]?.full_name?.split(' ')[0] : report.profiles?.full_name?.split(' ')[0] || 'Staff'}
                             </span>
+                            {report.attachment_url && (
+                              <a href={report.attachment_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[9px] font-bold text-neo-primary dark:text-neo-primary bg-zinc-50 dark:bg-zinc-800/50 px-2 py-0.5 rounded-full border border-zinc-100 dark:border-zinc-700/50 hover:scale-105 transition-transform" title={report.attachment_name === 'Link' ? 'Pautan Dilampirkan' : 'Fail Dilampirkan'}>
+                                {report.attachment_name === 'Link' ? <Link size={10} /> : <Paperclip size={10} />} ATTACHED
+                              </a>
+                            )}
                           </div>
                         </div>
 
@@ -1228,6 +1397,31 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                             <p className="text-sm font-medium text-green-900 dark:text-green-200">{selectedReport.next_action || 'Tiada pelan tindakan lanjut.'}</p>
                           </div>
                         </div>
+
+                        {selectedReport.attachment_url && (
+                          <div className="relative p-6 bg-zinc-50 dark:bg-zinc-800 border-4 border-black dark:border-white rounded-2xl shadow-neo-sm">
+                            <div className="absolute -top-3 left-4 bg-black text-white dark:bg-white dark:text-black px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest">Lampiran Fail / Pautan</div>
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-3">
+                                <div className="p-3 bg-neo-yellow border-2 border-black rounded-xl">
+                                  {selectedReport.attachment_name === 'Link' ? <Link size={20} /> : <FileText size={20} />}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-black uppercase dark:text-white truncate">{selectedReport.attachment_name || 'Lampiran Kerja'}</p>
+                                  <p className="text-[10px] font-bold text-zinc-400 truncate max-w-[200px]">{selectedReport.attachment_url}</p>
+                                </div>
+                              </div>
+                              <a
+                                href={selectedReport.attachment_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-black text-white dark:bg-white dark:text-black px-5 py-2 rounded-lg font-black text-xs uppercase flex items-center gap-2 hover:translate-x-1 transition-transform"
+                              >
+                                Buka <ExternalLink size={14} />
+                              </a>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* COMMENTS SECTION */}

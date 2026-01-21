@@ -4,15 +4,16 @@ import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 import { LogOut, FolderPlus, Trash2, FolderOpen, User, Edit3, X, Check, Briefcase, Shield, Crown, Filter, Camera, Loader2, Building2, Calendar, Clock, ChevronDown, Sun, Moon, UserPlus, MapPin, Send, CheckCircle2, XCircle } from 'lucide-react'
 import { useTheme } from '@/lib/ThemeProvider'
+import { notifyAllAdmins, notifyStaffStatusUpdate } from '@/app/actions/emailActions'
 
 // Define types
-type Profile = { id: string; full_name: string; job_title: string; role: string; company_name: string; avatar_url: string | null }
+type Profile = { id: string; full_name: string; job_title: string; role: string; company_name: string; avatar_url: string | null; email?: string }
 type Project = {
   id: number;
   name: string;
   description: string;
   user_id: string;
-  profiles?: { full_name: string; avatar_url: string | null };
+  profiles?: { full_name: string; avatar_url: string | null; email?: string };
   status?: string;
   color?: string;
 }
@@ -25,7 +26,7 @@ type WorkingRequest = {
   reason: string;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
-  profiles?: { full_name: string; avatar_url: string | null };
+  profiles?: { full_name: string; avatar_url: string | null; email?: string };
 }
 
 export default function Dashboard() {
@@ -61,6 +62,9 @@ export default function Dashboard() {
     reason: ''
   })
 
+  // Dashboard View State
+  const [activeTab, setActiveTab] = useState<'projects' | 'working'>('projects')
+
   // Live Date State
   const [currentTime, setCurrentTime] = useState(new Date())
 
@@ -92,33 +96,34 @@ export default function Dashboard() {
     const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single()
     setProfile(profileData)
 
-    // 3. Logic Fetch Projek (Global View - All users see the same 'Client Folders')
+    // 3. Logic Fetch Projek (Global View)
     const { data: projectData, error: projectError } = await supabase
       .from('projects')
-      .select('*, profiles:user_id(full_name, avatar_url)')
+      .select('*, profiles!user_id(full_name, avatar_url, email)')
       .order('created_at', { ascending: false })
 
     if (projectError) console.error('Error fetching projects:', projectError)
     setProjects(projectData || [])
 
-    // Admin View: Fetch all profiles for filtering in the NEXT level if needed
+    // Admin View: Fetch profiles for filtering
     if (profileData?.role === 'admin' && staffList.length === 0) {
       const { data: allStaff } = await supabase.from('profiles').select('*').order('full_name', { ascending: true })
       setStaffList(allStaff || [])
     }
 
-    // 4. Tarik Permohonan Kerja (WFH/Remote/Lapangan)
-    const { data: reqs } = await supabase
+    // 4. Tarik Permohonan Kerja
+    const { data: reqs, error: reqError } = await supabase
       .from('working_requests')
-      .select('*, profiles:user_id(full_name, avatar_url)')
+      .select('*, profiles!user_id(full_name, avatar_url, email)')
       .order('created_at', { ascending: false })
 
+    if (reqError) {
+      console.error('Error fetching working requests:', reqError.message, reqError.details, reqError.hint)
+    }
     setWorkingRequests(reqs || [])
-
     setLoading(false)
   }
 
-  // --- FUNGSI UPLOAD GAMBAR ---
   const handleUploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true)
@@ -158,7 +163,6 @@ export default function Dashboard() {
     router.push('/')
   }
 
-  // Explicitly map colors to classes so Tailwind JIT picks them up
   const baseColorMap: Record<string, string> = {
     'neo-yellow': 'bg-neo-yellow',
     'neo-primary': 'bg-neo-primary',
@@ -168,16 +172,6 @@ export default function Dashboard() {
     'orange-400': 'bg-orange-400',
   }
 
-  const hoverGradientMap: Record<string, string> = {
-    'neo-yellow': 'group-hover:bg-gradient-to-r group-hover:from-neo-yellow group-hover:via-white group-hover:to-neo-yellow',
-    'neo-primary': 'group-hover:bg-gradient-to-r group-hover:from-neo-primary group-hover:via-red-300 group-hover:to-neo-primary',
-    'blue-400': 'group-hover:bg-gradient-to-r group-hover:from-blue-400 group-hover:via-blue-200 group-hover:to-blue-400',
-    'green-400': 'group-hover:bg-gradient-to-r group-hover:from-green-400 group-hover:via-green-200 group-hover:to-green-400',
-    'purple-400': 'group-hover:bg-gradient-to-r group-hover:from-purple-400 group-hover:via-purple-200 group-hover:to-purple-400',
-    'orange-400': 'group-hover:bg-gradient-to-r group-hover:from-orange-400 group-hover:via-orange-200 group-hover:to-orange-400',
-  }
-
-  // --- CRUD PROJEK --- (Rest of function remains same)
   const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newProjectName.trim()) return
@@ -200,47 +194,12 @@ export default function Dashboard() {
 
     try {
       if (editingProject) {
-        // PERCUBAAN 1: Update Semua Kolum
-        const { error } = await supabase
-          .from('projects')
-          .update(projectData)
-          .eq('id', editingProject.id)
-
-        if (error) {
-          // Fallback: Jika error sebab kolum tiada, cuba update yang asas sahaja
-          if (error.message.includes('column') || error.message.includes('Schema')) {
-            console.warn('Kolum baru belum ada di DB, mencuba update asas...')
-            const { error: retryError } = await supabase
-              .from('projects')
-              .update({ name: newProjectName, description: newProjectDesc })
-              .eq('id', editingProject.id)
-
-            if (retryError) throw retryError
-            alert('Projek dikemaskini (Ciri Warna/Status belum aktif di server)')
-          } else {
-            throw error
-          }
-        }
+        const { error } = await supabase.from('projects').update(projectData).eq('id', editingProject.id)
+        if (error) throw error
       } else {
-        // PERCUBAAN 1: Insert Semua Kolum
         const { error } = await supabase.from('projects').insert([projectData])
-
-        if (error) {
-          // Fallback
-          if (error.message.includes('column') || error.message.includes('Schema')) {
-            console.warn('Kolum baru belum ada di DB, mencuba insert asas...')
-            const { error: retryError } = await supabase
-              .from('projects')
-              .insert([{ name: newProjectName, description: newProjectDesc, user_id: user.id }])
-
-            if (retryError) throw retryError
-            alert('Projek dicipta (Ciri Warna/Status belum aktif di server)')
-          } else {
-            throw error
-          }
-        }
+        if (error) throw error
       }
-
       fetchData()
       resetModal()
     } catch (error: any) {
@@ -261,7 +220,6 @@ export default function Dashboard() {
     }
   }
 
-  // --- FUNGSI PERMOHONAN KERJA ---
   const handleAddRequest = async (e: React.FormEvent) => {
     e.preventDefault()
     setReqLoading(true)
@@ -276,26 +234,58 @@ export default function Dashboard() {
 
     if (error) alert(error.message)
     else {
+      // Logic Hantar Email ke SEMUA Admin (Server Side)
+      const datesString = `${reqForm.start_date} hingga ${reqForm.end_date}`
+      await notifyAllAdmins(profile?.full_name || 'Staff', reqForm.type, datesString)
+
       setShowWorkModal(false)
       fetchData()
       setReqForm({ type: 'WFH', start_date: '', end_date: '', reason: '' })
-      alert('Permohonan anda telah dihantar untuk kelulusan admin.')
+      alert('Permohonan anda telah dihantar. Admin akan menerima notifikasi email.')
     }
     setReqLoading(false)
   }
 
   const handleUpdateStatus = async (id: number, status: 'approved' | 'rejected') => {
-    if (profile?.role !== 'admin') return
+    if (isAdmin) {
+      const { error } = await supabase
+        .from('working_requests')
+        .update({ status })
+        .eq('id', id)
 
-    const { error } = await supabase
-      .from('working_requests')
-      .update({ status })
-      .eq('id', id)
+      if (error) alert(error.message)
+      else {
+        // Logic Hantar Email ke Staff
+        const req = workingRequests.find(r => r.id === id)
+        if (req?.profiles?.email) {
+          notifyStaffStatusUpdate(req.profiles.email, req.type, status)
+        }
 
-    if (error) alert(error.message)
-    else {
-      alert(`Permohonan telah ${status === 'approved' ? 'diluluskan' : 'ditolak'}.`)
-      fetchData()
+        alert(`Permohonan telah ${status === 'approved' ? 'diluluskan' : 'ditolak'}. Notifikasi email telah dihantar kepada staff.`)
+        fetchData()
+      }
+    }
+  }
+
+  const handleDeleteRequest = async (id: number, userId: string) => {
+    const isOwner = profile?.id === userId
+
+    if (!isOwner && !isAdmin) {
+      alert('Anda tidak mempunyai kebenaran untuk memadam permohonan ini.')
+      return
+    }
+
+    if (confirm('Adakah anda pasti mahu membatalkan permohonan ini? Rekod akan dipadam sepenuhnya.')) {
+      const { error } = await supabase
+        .from('working_requests')
+        .delete()
+        .eq('id', id)
+
+      if (error) alert('Gagal memadam: ' + error.message)
+      else {
+        fetchData()
+        alert('Permohonan telah dibatalkan. Status bekerja anda kini kembali ke Office.')
+      }
     }
   }
 
@@ -324,27 +314,18 @@ export default function Dashboard() {
     </div>
   )
 
-  const isAdmin = profile?.role === 'admin'
+  const isAdmin = profile?.role?.toLowerCase() === 'admin'
 
   return (
     <div className="min-h-screen bg-neo-bg text-neo-dark font-sans !px-3 py-4 md:p-6 w-full max-w-7xl mx-auto pb-10">
 
-      {/* HEADER: Compact & Responsive */}
+      {/* HEADER */}
       <header className="mb-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 w-full">
-
-          {/* USER PROFILE CARD */}
-          {/* USER PROFILE CARD - REDESIGNED */}
-          {/* USER PROFILE CARD - COMPACT REDESIGN */}
-          <div className="lg:col-span-8 group relative bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-center gap-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.5)] transition-all hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[10px_10px_0px_0px_rgba(255,255,255,0.8)] overflow-hidden">
-
-            {/* Decorative Background Elements */}
-            <div className="absolute top-0 right-0 w-48 h-48 bg-neo-yellow rounded-full mix-blend-multiply blur-3xl opacity-20 animate-pulse pointer-events-none transform translate-x-1/3 -translate-y-1/3"></div>
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-neo-primary rounded-full mix-blend-multiply blur-3xl opacity-20 pointer-events-none transform -translate-x-1/3 translate-y-1/3"></div>
-
-            {/* AVATAR SECTION */}
+          {/* PROFILE CARD */}
+          <div className="lg:col-span-8 group relative bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-center gap-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.5)] transition-all overflow-hidden">
             <div className="relative shrink-0">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-black bg-zinc-100 overflow-hidden relative z-10 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] group-hover:scale-105 transition-transform duration-300">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-black bg-zinc-100 overflow-hidden relative z-10 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
@@ -353,421 +334,297 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
-              {/* Edit Button */}
-              <label className="absolute bottom-0 right-0 z-20 bg-black text-white p-2 rounded-full cursor-pointer hover:bg-neo-primary hover:text-white transition-all border-2 border-white hover:scale-110 active:scale-95 shadow-lg group-hover:rotate-12">
+              <label className="absolute bottom-0 right-0 z-20 bg-black text-white p-2 rounded-full cursor-pointer hover:bg-neo-primary border-2 border-white transition-all">
                 <Camera size={14} />
                 <input type="file" accept="image/*" className="hidden" onChange={handleUploadAvatar} disabled={uploading} />
               </label>
             </div>
 
-            {/* TEXT CONTENT SECTION */}
-            <div className="flex-grow text-center sm:text-left z-10 flex flex-col items-center sm:items-start gap-1 w-full">
-
-              {/* Greeting & Name */}
-              <div className="mb-1.5 w-full">
-                <div className="flex items-center justify-center sm:justify-start gap-1.5 mb-0.5 opacity-60">
-                  <div className="h-[2px] w-3 bg-black dark:bg-white"></div>
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-black dark:text-white">HELLO</span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black italic uppercase leading-[0.9] tracking-tighter text-black dark:text-white break-words w-full">
+            <div className="flex-grow text-center sm:text-left z-10">
+              <div className="mb-1.5">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">WELCOME BACK</p>
+                <h1 className="text-3xl sm:text-4xl font-black italic uppercase leading-none tracking-tighter dark:text-white">
                   {profile?.full_name || 'Staff'}
                 </h1>
               </div>
-
-              {/* Details Row */}
-              <div className="flex flex-wrap justify-center sm:justify-start gap-2 w-full">
-                <div className="flex items-center gap-1.5 text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 dark:border-zinc-600 px-2.5 py-1 rounded border border-zinc-300">
-                  <Briefcase size={12} className="text-zinc-600 dark:text-zinc-400" />
-                  <span className="font-bold text-[10px] sm:text-xs uppercase tracking-wide">{profile?.job_title || 'Jawatan'}</span>
-                </div>
-
-                <div className="flex items-center gap-1.5 text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 dark:border-zinc-600 px-2.5 py-1 rounded border border-zinc-300">
-                  <Building2 size={12} className="text-zinc-600 dark:text-zinc-400" />
-                  <span className="font-bold text-[10px] sm:text-xs uppercase tracking-wide">
-                    {profile?.company_name || 'Generic Corp'}
-                  </span>
-                </div>
+              <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
+                <span className="bg-zinc-100 dark:bg-zinc-800 border-2 border-black dark:border-white px-2.5 py-1 rounded font-bold text-[10px] uppercase dark:text-white">{profile?.job_title}</span>
+                <span className="bg-zinc-100 dark:bg-zinc-800 border-2 border-black dark:border-white px-2.5 py-1 rounded font-bold text-[10px] uppercase dark:text-white">{profile?.company_name}</span>
+                <span className="bg-black text-white px-2.5 py-1 rounded font-black text-[10px] uppercase tracking-widest">{profile?.role}</span>
               </div>
-
-              {/* Role Badge */}
-              <div className="mt-2.5 w-full border-t border-dashed border-zinc-300 pt-2.5 flex justify-center sm:justify-start">
-                <div className="inline-flex items-center gap-1.5 bg-black text-white px-3 py-1 rounded-full border-2 border-transparent group-hover:border-neo-primary transition-colors hover:bg-zinc-800">
-                  <Shield size={12} className="text-neo-primary" />
-                  <span className="text-[9px] font-black uppercase tracking-widest">Peranan SYSTEM: {profile?.role || 'User'}</span>
-                </div>
-              </div>
-
             </div>
           </div>
 
-          {/* STATS & ACTIONS SIDEBAR */}
-          <div className="lg:col-span-4 flex flex-col sm:flex-row lg:flex-col gap-3">
-            {/* Stats Card */}
-            <div className="neo-card bg-white dark:bg-zinc-900 text-black dark:text-white p-3 flex-1 flex flex-col justify-center items-center text-center relative overflow-hidden group min-h-[100px] border-2 border-black dark:border-white">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neo-primary to-neo-yellow"></div>
-              <div className="absolute -right-2 -bottom-2 text-6xl font-black text-black dark:text-white opacity-5 select-none leading-none z-0">{projects.length}</div>
-              <div className="relative z-10">
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-[9px] font-bold uppercase tracking-widest mb-0.5">
-                  {selectedStaffId === 'all' ? 'Projek Pasukan' : 'Jumlah Paparan'}
-                </h3>
-                <div className="text-4xl font-black text-black dark:text-white leading-none mb-0.5 group-hover:scale-110 transition-transform duration-300 drop-shadow-[2px_2px_0px_rgba(0,0,0,0.2)] dark:drop-shadow-[2px_2px_0px_rgba(255,255,255,0.2)]">
-                  {projects.length}
-                </div>
+          {/* QUICK STATS */}
+          <div className="lg:col-span-4 flex flex-col gap-3">
+            <div className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white p-4 rounded-xl flex items-center justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,107,107,0.5)]">
+              <div>
+                <p className="text-[10px] font-black uppercase text-zinc-400">Total Projects</p>
+                <h3 className="text-3xl font-black dark:text-white">{projects.length}</h3>
               </div>
+              <div className="bg-neo-primary p-2.5 rounded-lg border-2 border-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"><FolderOpen size={24} /></div>
             </div>
 
-            {/* Date/Time & Logout */}
-            <div className="neo-card bg-white dark:bg-zinc-900 p-3 flex-1 flex flex-col justify-center gap-2">
-              <div className="flex justify-between items-center border-b-2 border-zinc-100 dark:border-zinc-800 pb-1.5 mb-0.5">
-                <div className="flex items-center gap-1.5">
-                  <Calendar size={12} className="text-black dark:text-white" />
-                  <span className="text-[10px] font-bold uppercase dark:text-white">{currentTime.toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Clock size={12} className="text-neo-primary" />
-                  <span className="text-[10px] font-bold uppercase dark:text-white">{currentTime.toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
+            <div className="bg-black text-white p-4 rounded-xl flex items-center justify-between shadow-[4px_4px_0px_0px_rgba(253,224,71,1)]">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black uppercase text-zinc-500">{currentTime.toLocaleDateString('ms-MY', { weekday: 'long' })}</span>
+                <span className="text-xl font-black italic uppercase leading-none">{currentTime.toLocaleDateString('ms-MY', { day: '2-digit', month: 'short' })}</span>
               </div>
-              <button
-                onClick={handleLogout}
-                className="w-full group bg-white hover:bg-neo-primary hover:text-white dark:bg-zinc-800 dark:text-white dark:border-white border-2 border-black rounded-lg text-black font-black py-2.5 px-4 flex items-center justify-center gap-2 text-xs transition-all uppercase shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.5)]"
-              >
-                <LogOut size={14} strokeWidth={3} className="group-hover:translate-x-1 transition-transform duration-300" />
-                Log Keluar
-              </button>
-
-              {/* Theme Toggle */}
-              <button
-                onClick={toggleTheme}
-                className="w-full group bg-black hover:bg-zinc-800 text-white border-2 border-black rounded-lg font-black py-2.5 px-4 flex items-center justify-center gap-2 text-xs transition-all uppercase shadow-[3px_3px_0px_0px_rgba(255,255,255,1)] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.2)]"
-              >
-                {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
-                {theme === 'light' ? 'Mod Gelap' : 'Mod Cerah'}
-              </button>
+              <div className="text-right">
+                <span className="text-2xl font-black">{currentTime.toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={toggleTheme} className="bg-white text-black p-2 rounded-lg hover:bg-neo-yellow transition-colors">
+                  {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                </button>
+                <button onClick={handleLogout} className="bg-white text-black p-2 rounded-lg hover:bg-neo-primary hover:text-white transition-colors">
+                  <LogOut size={20} />
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* FILTER & ACTIONS TOOLBAR */}
-      <div className="mb-8">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-zinc-900 border-2 border-black dark:border-white p-3 sm:p-4 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.5)]">
-          {/* Left Side */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              <div className="bg-white text-black border-2 border-black dark:bg-zinc-800 dark:text-white dark:border-zinc-700 p-2.5 rounded-lg shrink-0"><FolderOpen size={20} /></div>
-              <div>
-                <h2 className="text-xl font-black uppercase italic leading-none dark:text-white">Folder Projek Client</h2>
-                <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mt-0.5">Senarai Utama Client & Projek</p>
-              </div>
-            </div>
-          </div>
-          {/* Right Side */}
-          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-            {isAdmin && (
-              <button
-                onClick={() => router.push('/admin/invite')}
-                className="w-full md:w-auto bg-black text-white border-2 border-black px-6 py-2.5 font-black uppercase tracking-wide rounded-lg shadow-[2px_2px_0px_0px_rgba(255,107,107,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2 group"
-              >
-                <UserPlus size={18} className="text-neo-primary group-hover:scale-110 transition-transform" />
-                <span>Urus Staff</span>
-              </button>
-            )}
-            {!isAdmin && (
-              <button
-                onClick={() => setShowWorkModal(true)}
-                className="w-full md:w-auto bg-black text-white border-2 border-black px-6 py-2.5 font-black uppercase tracking-wide rounded-lg shadow-[2px_2px_0px_0px_rgba(253,224,71,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2 group"
-              >
-                <MapPin size={18} className="text-neo-yellow group-hover:scale-110 transition-transform" />
-                <span>Mohon Lokasi</span>
-              </button>
-            )}
-            {isAdmin && (
-              <button
-                onClick={() => setShowModal(true)}
-                className="w-full md:w-auto bg-neo-primary text-white border-2 border-black dark:border-white px-6 py-2.5 font-black uppercase tracking-wide rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.5)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2 group"
-              >
-                <FolderPlus size={18} className="group-hover:rotate-12 transition-transform" />
-                <span>Tambah Projek</span>
-              </button>
-            )}
-          </div>
-        </div>
+      {/* DASHBOARD TABS */}
+      <div className="flex gap-2 mb-8 bg-zinc-100 dark:bg-zinc-800 p-1.5 rounded-2xl w-fit">
+        <button
+          onClick={() => setActiveTab('projects')}
+          className={`px-6 py-3 rounded-xl font-black uppercase text-xs transition-all flex items-center gap-2 ${activeTab === 'projects' ? 'bg-black text-white shadow-lg' : 'text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+        >
+          <FolderOpen size={16} /> Projek Client
+        </button>
+        <button
+          onClick={() => setActiveTab('working')}
+          className={`px-6 py-3 rounded-xl font-black uppercase text-xs transition-all flex items-center gap-2 relative ${activeTab === 'working' ? 'bg-black text-white shadow-lg' : 'text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+        >
+          <MapPin size={16} /> Log Lokasi
+          {isAdmin ? (
+            workingRequests.filter(r => r.status === 'pending').length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-neo-primary text-white text-[9px] min-w-[18px] h-[18px] flex items-center justify-center rounded-full border-2 border-white dark:border-zinc-900 font-black px-1 animate-pulse">
+                {workingRequests.filter(r => r.status === 'pending').length}
+              </span>
+            )
+          ) : (
+            workingRequests.filter(r => r.user_id === profile?.id && r.status !== 'pending' && r.created_at > (new Date(Date.now() - 86400000).toISOString())).length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-green-500 w-3 h-3 rounded-full border-2 border-white animate-ping" />
+            )
+          )}
+        </button>
       </div>
 
-      {/* WORKING REQUESTS SECTION (Pending for Admin, All for User) */}
-      {(workingRequests.length > 0) && (
-        <div className="mb-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="bg-black text-white p-2 rounded-lg"><Calendar size={20} /></div>
-            <div>
-              <h2 className="text-xl font-black uppercase italic leading-none dark:text-white">
-                {isAdmin ? 'Permohonan Menunggu Kelulusan' : 'Status Permohonan Kerja'}
-              </h2>
-              <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mt-0.5">
-                {isAdmin ? 'Semakan permohonan WFH, Remote & Lapangan' : 'Rekod permohonan lokasi luar pejabat'}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {workingRequests.filter(r => isAdmin ? r.status === 'pending' : true).map((req) => (
-              <div key={req.id} className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] flex flex-col gap-3">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full border-2 border-black bg-zinc-100 overflow-hidden">
-                      {req.profiles?.avatar_url ? <img src={req.profiles.avatar_url} className="w-full h-full object-cover" /> : <User size={16} className="m-auto mt-1" />}
-                    </div>
-                    <div>
-                      <p className="text-xs font-black uppercase leading-none dark:text-white">{req.profiles?.full_name || 'Staff'}</p>
-                      <p className="text-[9px] font-bold text-zinc-400 uppercase">{new Date(req.created_at).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                  <span className={`text-[10px] font-black uppercase px-2 py-1 rounded border-2 border-black ${req.status === 'pending' ? 'bg-neo-yellow' :
-                      req.status === 'approved' ? 'bg-green-400' : 'bg-red-400 text-white'
-                    }`}>
-                    {req.status}
-                  </span>
-                </div>
-
-                <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-lg border-2 border-black/5 dark:border-white/5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="bg-black text-white text-[9px] font-black px-2 py-0.5 rounded">{req.type}</span>
-                    <span className="text-[10px] font-bold dark:text-zinc-300 italic">{req.start_date} → {req.end_date}</span>
-                  </div>
-                  <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400 line-clamp-2">"{req.reason || 'Tiada alasan disediakan.'}"</p>
-                </div>
-
-                {isAdmin && req.status === 'pending' && (
-                  <div className="flex gap-2 mt-1">
-                    <button
-                      onClick={() => handleUpdateStatus(req.id, 'approved')}
-                      className="flex-1 bg-green-400 hover:bg-green-500 border-2 border-black py-2 rounded-lg text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all"
-                    >
-                      Luluskan
-                    </button>
-                    <button
-                      onClick={() => handleUpdateStatus(req.id, 'rejected')}
-                      className="flex-1 bg-red-400 hover:bg-red-500 text-white border-2 border-black py-2 rounded-lg text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all"
-                    >
-                      Tolak
-                    </button>
-                  </div>
+      {/* TAB CONTENT */}
+      <div className="space-y-8 min-h-[400px]">
+        {activeTab === 'projects' && (
+          <div className="animate-in fade-in slide-in-from-bottom-5 duration-500">
+            {/* TOOLBAR */}
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8 bg-white dark:bg-zinc-900 border-2 border-black dark:border-white p-4 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <div className="flex items-center gap-3">
+                <div className="bg-neo-yellow p-2 rounded border-2 border-black"><FolderPlus size={20} /></div>
+                <h2 className="text-xl font-black uppercase italic dark:text-white">Folder Projek Client</h2>
+              </div>
+              <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                <button onClick={() => setShowWorkModal(true)} className="flex-1 md:flex-none bg-black text-white px-6 py-2.5 rounded-lg font-black uppercase text-[10px] tracking-widest border-2 border-black shadow-[2px_2px_0px_0px_rgba(253,224,71,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all flex items-center justify-center gap-2"><MapPin size={16} /> Mohon Lokasi</button>
+                {isAdmin && (
+                  <>
+                    <button onClick={() => router.push('/admin/invite')} className="flex-1 md:flex-none bg-black text-white px-6 py-2.5 rounded-lg font-black uppercase text-[10px] tracking-widest border-2 border-black shadow-[2px_2px_0px_0px_rgba(255,107,107,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all">Staff</button>
+                    <button onClick={() => setShowModal(true)} className="flex-1 md:flex-none bg-neo-primary text-white px-6 py-2.5 rounded-lg font-black uppercase text-[10px] tracking-widest border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all flex items-center justify-center gap-2"><FolderPlus size={16} /> New Project</button>
+                  </>
                 )}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            </div>
 
-      {/* PROJECTS GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {projects.length === 0 && (
-          <div className="col-span-full py-16 text-center border-4 border-dashed border-zinc-300 rounded-xl bg-zinc-50">
-            <FolderOpen size={48} className="mx-auto text-zinc-300 mb-2" />
-            <p className="font-bold text-zinc-400">Tiada projek ditemui.</p>
+            {/* GRID */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {projects.length === 0 ? (
+                <div className="col-span-full py-20 text-center border-4 border-dashed border-zinc-200 rounded-3xl bg-white dark:bg-zinc-900/50">
+                  <FolderOpen size={48} className="mx-auto text-zinc-200 mb-4" />
+                  <p className="font-black text-zinc-400 uppercase tracking-widest">Tiada projek aktif.</p>
+                </div>
+              ) : (
+                projects.map((proj) => (
+                  <div
+                    key={proj.id}
+                    onClick={() => router.push(`/dashboard/${proj.id}`)}
+                    className="group bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all hover:-translate-y-1 cursor-pointer overflow-hidden flex flex-col h-full"
+                  >
+                    <div className={`h-2.5 w-full ${baseColorMap[proj.color || 'neo-yellow']}`}></div>
+                    <div className="p-5 flex-grow">
+                      <div className="flex justify-between items-start mb-4">
+                        <span className="text-[10px] font-black uppercase px-2 py-1 bg-zinc-100 rounded border border-black text-zinc-400">#{proj.id}</span>
+                        <span className={`text-[10px] font-black uppercase px-2 py-1 rounded border border-black ${proj.status === 'completed' ? 'bg-black text-white' : 'bg-green-400'}`}>{proj.status || 'Active'}</span>
+                      </div>
+                      <h3 className="text-xl font-black uppercase leading-tight mb-2 dark:text-white group-hover:underline">{proj.name}</h3>
+                      <p className="text-xs font-medium text-zinc-500 line-clamp-3 leading-relaxed">{proj.description}</p>
+                    </div>
+                    <div className="p-4 bg-zinc-50 dark:bg-zinc-800 border-t-2 border-black dark:border-white flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full border border-black overflow-hidden bg-white shrink-0">
+                          {proj.profiles?.avatar_url ? <img src={proj.profiles.avatar_url} className="w-full h-full object-cover" /> : <User size={14} className="m-auto mt-1" />}
+                        </div>
+                        <span className="text-[10px] font-bold uppercase truncate max-w-[80px] dark:text-white">{proj.profiles?.full_name?.split(' ')[0]}</span>
+                      </div>
+                      {isAdmin && (
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={(e) => handleEditClick(e, proj)} className="p-1.5 hover:bg-neo-yellow rounded border-2 border-transparent hover:border-black"><Edit3 size={12} /></button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDeleteProject(proj.id); }} className="p-1.5 hover:bg-red-500 hover:text-white rounded border-2 border-transparent hover:border-black"><Trash2 size={12} /></button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         )}
 
-        {projects.map((proj) => {
-          // Dynamic Color Logic
-          const colorClass = proj.color ? `bg-${proj.color}` : 'bg-neo-yellow';
-          // Ensure valid background class, otherwise fallback (simple hack without mapping full palette in safelist)
-          // For now, assuming Tailwind arbitrary values are not needed if we stick to safelisted or known classes.
-          // Or we use style attribute for safety if we are unsure about arbitrary class construction.
-
-          return (
-            <div
-              key={proj.id}
-              onClick={() => router.push(`/dashboard/${proj.id}`)}
-              className="group relative flex flex-col justify-between h-full bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.5)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.8)] transition-all duration-300 hover:-translate-y-1 cursor-pointer overflow-hidden"
-            >
-              {/* Decorative Header Strip with Dynamic Color & Moving Stripes */}
-              <div className={`h-3 w-full ${baseColorMap[proj.color || 'neo-yellow']} hover-stripes flex items-center justify-end px-2`}>
-                <div className="w-16 h-full bg-white/20 transform -skew-x-12"></div>
-              </div>
-
-              {/* Main Content */}
-              <div className="p-3 sm:p-5 flex-grow flex flex-col relative">
-                {/* Top Row: Actions */}
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex gap-2">
-                    <span className="font-mono text-[10px] font-black tracking-widest bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded border border-black dark:border-zinc-600 text-zinc-500 dark:text-zinc-400">
-                      #{proj.id.toString().padStart(3, '0')}
-                    </span>
-                    {/* Status Badge */}
-                    <span className={`text-[10px] font-black uppercase px-2 py-1 rounded border border-black ${proj.status === 'completed' ? 'bg-zinc-800 text-white' : 'bg-green-400 text-black animate-pulse'}`}>
-                      {proj.status === 'completed' ? 'Selesai' : 'Aktif'}
-                    </span>
-                  </div>
-
-                  {/* Floating Actions - ADMIN ONLY */}
-                  {isAdmin && (
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute top-4 right-4 bg-white/90 backdrop-blur border border-black rounded-full p-1 shadow-sm z-10">
-                      <button onClick={(e) => handleEditClick(e, proj)} className="p-1.5 hover:bg-neo-yellow rounded-full text-black transition-colors" title="Edit"><Edit3 size={14} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDeleteProject(proj.id); }} className="p-1.5 hover:bg-red-500 hover:text-white rounded-full text-red-500 transition-colors" title="Delete"><Trash2 size={14} /></button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mb-4">
-                  <h3 className="text-2xl font-black uppercase leading-[1.1] mb-2 tracking-tight group-hover:underline decoration-2 underline-offset-2 decoration-black dark:decoration-white transition-all line-clamp-2 dark:text-white">
-                    {proj.name}
-                  </h3>
-                  <p className="text-sm font-medium text-zinc-500 line-clamp-3 leading-relaxed">
-                    {proj.description || "Tiada deskripsi projek."}
-                  </p>
-                </div>
-              </div>
-
-              {/* Footer Metadata */}
-              <div className="px-5 py-3 border-t-2 border-black dark:border-white bg-zinc-50 dark:bg-zinc-800 flex items-center justify-between gap-4 group-hover:bg-zinc-100 dark:group-hover:bg-zinc-700 transition-colors">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-full border-2 border-black bg-zinc-200 overflow-hidden flex-shrink-0 shadow-sm">
-                    {proj.profiles?.avatar_url ? <img src={proj.profiles.avatar_url} alt="Creator" className="w-full h-full object-cover" /> : <User size={16} className="w-full h-full p-1.5 text-black" />}
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-[9px] font-bold uppercase text-zinc-400 leading-none mb-0.5 whitespace-nowrap">Created By</span>
-                    <span className="text-xs font-black uppercase text-black dark:text-white leading-none truncate w-full">{proj.profiles?.full_name?.split(' ')[0] || 'Unknown'}</span>
-                  </div>
-                </div>
+        {activeTab === 'working' && (
+          <div className="animate-in fade-in slide-in-from-bottom-5 duration-500">
+            <div className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white p-5 rounded-xl shadow-[4px_4px_0px_0px_rgba(253,224,71,1)] flex items-center gap-4 mb-8">
+              <div className="bg-black text-white p-3 rounded-xl"><Calendar size={24} /></div>
+              <div>
+                <h2 className="text-2xl font-black uppercase italic dark:text-white">
+                  {isAdmin ? 'Log Lokasi Staff' : 'Status Permohonan Saya'}
+                </h2>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
+                  {isAdmin ? 'Status Kehadiran Luar Pejabat' : 'Rekod dan maklumbalas permohonan lokasi'}
+                </p>
               </div>
             </div>
-          )
-        })}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {workingRequests.filter(r => isAdmin ? true : r.user_id === profile?.id).length === 0 ? (
+                <div className="col-span-full py-20 text-center border-4 border-dashed border-zinc-200 rounded-3xl bg-white dark:bg-zinc-900/50">
+                  <MapPin size={48} className="mx-auto text-zinc-200 mb-4" />
+                  <p className="font-black text-zinc-400 uppercase tracking-widest">Tiada rekod data dijumpai.</p>
+                </div>
+              ) : (
+                workingRequests
+                  .filter(r => isAdmin ? true : r.user_id === profile?.id)
+                  .map((req) => (
+                    <div key={req.id} className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-2xl p-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full border-2 border-black overflow-hidden bg-zinc-100">
+                            {req.profiles?.avatar_url ? <img src={req.profiles.avatar_url} className="w-full h-full object-cover" /> : <User size={20} className="m-auto mt-2" />}
+                          </div>
+                          <div>
+                            <p className="text-xs font-black uppercase dark:text-white leading-none">{req.profiles?.full_name}</p>
+                            <p className="text-[9px] font-bold text-zinc-400 mt-1 uppercase">{new Date(req.created_at).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[9px] font-black uppercase px-2 py-1 rounded border-2 border-black ${req.status === 'pending' ? 'bg-neo-yellow' : req.status === 'approved' ? 'bg-green-400' : 'bg-red-400 text-white'}`}>{req.status}</span>
+                          {(isAdmin || req.user_id === profile?.id) && (
+                            <button
+                              onClick={() => handleDeleteRequest(req.id, req.user_id)}
+                              className="p-1.5 bg-white dark:bg-zinc-800 border-2 border-black dark:border-white rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none"
+                              title="Batal / Padam Permohonan"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="bg-zinc-50 dark:bg-zinc-800 p-4 rounded-xl border-2 border-black/5 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="bg-black text-white text-[10px] font-black px-2 py-0.5 rounded uppercase">{req.type}</span>
+                          <span className="text-[9px] font-bold text-zinc-500 uppercase">{req.start_date} → {req.end_date}</span>
+                        </div>
+                        <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400 leading-relaxed italic">"{req.reason}"</p>
+                      </div>
+
+                      {isAdmin && req.status === 'pending' && (
+                        <div className="flex gap-2 mt-auto">
+                          <button onClick={() => handleUpdateStatus(req.id, 'approved')} className="flex-1 bg-green-400 border-2 border-black py-2.5 rounded-lg text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all">Approve</button>
+                          <button onClick={() => handleUpdateStatus(req.id, 'rejected')} className="flex-1 bg-red-400 text-white border-2 border-black py-2.5 rounded-lg text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all">Reject</button>
+                        </div>
+                      )}
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* MODAL */}
+      {/* PROJECT MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-lg border-4 border-black dark:border-white rounded-xl shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.5)] animate-in zoom-in-95 overflow-hidden">
-            <div className="flex justify-between items-center p-6 border-b-4 border-black dark:border-white">
-              <h3 className="text-3xl font-black uppercase italic tracking-tighter transform -skew-x-6 dark:text-white">{editingProject ? 'Kemaskini Projek' : 'Projek Baru'}</h3>
-              <button onClick={resetModal} className="bg-red-100 hover:bg-red-500 hover:text-white border-2 border-transparent hover:border-black dark:hover:border-white p-2 rounded-lg transition-all"><X size={20} className="text-black" /></button>
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-lg border-4 border-black dark:border-white rounded-2xl shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] animate-in zoom-in-95">
+            <div className="p-6 border-b-4 border-black flex justify-between items-center bg-neo-primary text-white rounded-t-[14px]">
+              <h3 className="text-2xl font-black uppercase italic">{editingProject ? 'Update Project' : 'New Project'}</h3>
+              <button onClick={resetModal} className="hover:rotate-90 transition-transform"><X size={24} /></button>
             </div>
-            <form onSubmit={handleAddProject} className="p-6 space-y-6">
-              <div className="space-y-2">
-                <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white">Nama Projek</label>
-                <input autoFocus required className="w-full bg-white dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 rounded-lg p-3 font-bold text-base outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.5)] focus:-translate-y-1 transition-all dark:text-white" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="Masukkan nama projek..." />
+            <form onSubmit={handleAddProject} className="p-6 space-y-5">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest dark:text-white">Project Name</label>
+                <input autoFocus required className="w-full bg-white dark:bg-zinc-800 border-2 border-black p-3 font-bold text-base rounded-lg outline-none focus:ring-4 ring-neo-primary/20" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} />
               </div>
-              <div className="space-y-2">
-                <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white">Deskripsi</label>
-                <textarea className="w-full bg-white dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 rounded-lg p-3 font-medium text-base outline-none h-24 resize-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.5)] focus:-translate-y-1 transition-all dark:text-white" value={newProjectDesc} onChange={e => setNewProjectDesc(e.target.value)} placeholder="Terangkan serba sedikit mengenai projek ini..." />
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest dark:text-white">Description</label>
+                <textarea className="w-full bg-white dark:bg-zinc-800 border-2 border-black p-3 font-medium text-sm rounded-lg outline-none h-24 resize-none" value={newProjectDesc} onChange={e => setNewProjectDesc(e.target.value)} />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
-                {/* Status Selection */}
-                <div className="space-y-2">
-                  <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white">Status Projek</label>
-                  <div className="relative">
-                    <select
-                      className="w-full appearance-none bg-white dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 rounded-lg p-3 font-bold text-base outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.5)] focus:-translate-y-1 transition-all cursor-pointer dark:text-white"
-                      value={newProjectStatus}
-                      onChange={(e) => setNewProjectStatus(e.target.value)}
-                    >
-                      <option value="active">AKTIF 🟢</option>
-                      <option value="completed">SELESAI ⚫️</option>
-                    </select>
-                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none"><ChevronDown size={16} /></div>
-                  </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest dark:text-white">Status</label>
+                  <select className="w-full bg-white dark:bg-zinc-800 border-2 border-black p-3 font-bold text-sm rounded-lg outline-none" value={newProjectStatus} onChange={e => setNewProjectStatus(e.target.value)}>
+                    <option value="active">Active 🟢</option>
+                    <option value="completed">Completed ⚫️</option>
+                  </select>
                 </div>
-
-                {/* Color Selection */}
-                <div className="space-y-2">
-                  <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white">Warna Kad</label>
-                  <div className="flex gap-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest dark:text-white">Color Theme</label>
+                  <div className="flex gap-1.5 h-11 items-center">
                     {colorOptions.map((c) => (
-                      <button
-                        type="button"
-                        key={c.name}
-                        onClick={() => setNewProjectColor(c.value)}
-                        className={`w-8 h-8 rounded-full border-2 border-black dark:border-white flex items-center justify-center transition-transform hover:scale-110 active:scale-95 ${newProjectColor === c.value ? 'ring-2 ring-offset-2 ring-black dark:ring-white' : ''}`}
-                        style={{ backgroundColor: c.hex }}
-                        title={c.name}
-                      >
-                        {newProjectColor === c.value && <Check size={14} className="text-black" strokeWidth={3} />}
-                      </button>
+                      <button type="button" key={c.name} onClick={() => setNewProjectColor(c.value)} className={`w-7 h-7 rounded-full border-2 border-black ${newProjectColor === c.value ? 'ring-2 ring-black ring-offset-2' : ''}`} style={{ backgroundColor: c.hex }} />
                     ))}
                   </div>
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t-2 border-dashed border-zinc-200">
-                <button type="button" onClick={resetModal} className="bg-zinc-200 hover:bg-white text-black border-2 border-black font-black uppercase tracking-wide py-3.5 rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">Batal</button>
-                <button type="submit" className="bg-neo-primary hover:brightness-110 text-white border-2 border-black font-black uppercase tracking-wide py-3.5 rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">{editingProject ? 'Simpan' : 'Cipta'}</button>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={resetModal} className="flex-1 bg-zinc-100 border-2 border-black py-4 font-black uppercase text-xs rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all">Cancel</button>
+                <button type="submit" className="flex-1 bg-neo-primary text-white border-2 border-black py-4 font-black uppercase text-xs rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all">Save Project</button>
               </div>
             </form>
           </div>
         </div>
       )}
+
       {/* WORKING REQUEST MODAL */}
       {showWorkModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-md border-4 border-black dark:border-white rounded-xl shadow-[8px_8px_0px_0px_rgba(253,224,71,1)] animate-in zoom-in-95 overflow-hidden">
-            <div className="flex justify-between items-center p-6 border-b-4 border-black dark:border-white">
-              <h3 className="text-3xl font-black uppercase italic tracking-tighter transform -skew-x-6 dark:text-white flex items-center gap-3">
-                <MapPin className="text-neo-yellow" /> Permohonan
-              </h3>
-              <button onClick={() => setShowWorkModal(false)} className="bg-red-100 hover:bg-red-500 hover:text-white border-2 border-transparent hover:border-black p-2 rounded-lg transition-all"><X size={20} className="text-black" /></button>
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-md border-4 border-black dark:border-white rounded-2xl shadow-[8px_8px_0px_0px_rgba(253,224,71,1)] animate-in zoom-in-95">
+            <div className="p-6 border-b-4 border-black flex justify-between items-center bg-black text-white rounded-t-[14px]">
+              <h3 className="text-xl font-black uppercase italic">Mohon Lokasi</h3>
+              <button onClick={() => setShowWorkModal(false)}><X size={24} /></button>
             </div>
             <form onSubmit={handleAddRequest} className="p-6 space-y-5">
               <div className="space-y-2">
-                <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white">Jenis Permohonan</label>
+                <label className="text-[10px] font-black uppercase tracking-widest dark:text-white">Jenis Permohonan</label>
                 <div className="grid grid-cols-3 gap-2">
                   {['WFH', 'Remote', 'Lapangan'].map(t => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setReqForm({ ...reqForm, type: t as any })}
-                      className={`py-2 border-2 border-black rounded-lg text-xs font-black uppercase transition-all ${reqForm.type === t ? 'bg-neo-yellow shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -translate-y-0.5' : 'bg-zinc-50 dark:bg-zinc-800 dark:text-white'
-                        }`}
-                    >
-                      {t}
-                    </button>
+                    <button key={t} type="button" onClick={() => setReqForm({ ...reqForm, type: t as any })} className={`py-3 border-2 border-black rounded-lg text-[10px] font-black uppercase transition-all ${reqForm.type === t ? 'bg-neo-yellow shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -translate-y-0.5' : 'bg-zinc-50 dark:bg-zinc-800 dark:text-zinc-500'}`}>{t}</button>
                   ))}
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white">Tarikh Mula</label>
-                  <input
-                    type="date"
-                    required
-                    className="w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-black rounded-lg p-3 font-bold text-xs dark:text-white outline-none"
-                    value={reqForm.start_date}
-                    onChange={e => setReqForm({ ...reqForm, start_date: e.target.value })}
-                  />
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest dark:text-white">Mula</label>
+                  <input type="date" required className="w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-black p-3 rounded-lg font-bold text-xs dark:text-white" value={reqForm.start_date} onChange={e => setReqForm({ ...reqForm, start_date: e.target.value })} />
                 </div>
-                <div className="space-y-2">
-                  <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white">Tarikh Tamat</label>
-                  <input
-                    type="date"
-                    required
-                    className="w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-black rounded-lg p-3 font-bold text-xs dark:text-white outline-none"
-                    value={reqForm.end_date}
-                    onChange={e => setReqForm({ ...reqForm, end_date: e.target.value })}
-                  />
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest dark:text-white">Tamat</label>
+                  <input type="date" required className="w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-black p-3 rounded-lg font-bold text-xs dark:text-white" value={reqForm.end_date} onChange={e => setReqForm({ ...reqForm, end_date: e.target.value })} />
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white">Sebab / Alasan</label>
-                <textarea
-                  required
-                  className="w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-black rounded-lg p-3 font-medium text-sm dark:text-white outline-none h-24 resize-none"
-                  placeholder="Kenapa anda memohon lokasi ini?"
-                  value={reqForm.reason}
-                  onChange={e => setReqForm({ ...reqForm, reason: e.target.value })}
-                />
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest dark:text-white">Alasan / Note</label>
+                <textarea required className="w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-black p-4 font-medium text-xs rounded-lg h-24 resize-none dark:text-white" value={reqForm.reason} onChange={e => setReqForm({ ...reqForm, reason: e.target.value })} placeholder="Nyatakan sebab permohonan..." />
               </div>
-
-              <button
-                type="submit"
-                disabled={reqLoading}
-                className="w-full bg-black text-white border-4 border-black rounded-xl py-4 font-black uppercase text-sm tracking-widest shadow-[4px_4px_0px_0px_rgba(253,224,71,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-              >
-                {reqLoading ? <Loader2 className="animate-spin" /> : <><Send size={18} /> Hantar Permohonan</>}
+              <button type="submit" disabled={reqLoading} className="w-full bg-black text-white border-2 border-black py-4 font-black uppercase text-xs rounded-xl shadow-[4px_4px_0px_0px_rgba(253,224,71,1)] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-3 disabled:opacity-50">
+                {reqLoading ? <Loader2 className="animate-spin" /> : <><Send size={16} /> Hantar Permohonan</>}
               </button>
             </form>
           </div>

@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 import { Loader2, ArrowRight } from 'lucide-react'
@@ -11,6 +11,35 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Auto-detect invitation session
+  useEffect(() => {
+    const handleAuthChange = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+
+      // If there's a session and it's an invite flow (from hash)
+      // Or if the user just clicked the link and landing here
+      if (window.location.hash.includes('type=invite') || window.location.hash.includes('recovery')) {
+        router.push('/update-password')
+      } else if (session) {
+        // If already logged in normally, go to dashboard
+        router.push('/dashboard')
+      }
+    }
+
+    handleAuthChange()
+
+    // Listen for auth state changes (especially for hash recovery)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && window.location.hash.includes('type=invite'))) {
+        router.push('/update-password')
+      } else if (session && event === 'SIGNED_IN') {
+        router.push('/dashboard')
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

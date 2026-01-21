@@ -2,6 +2,7 @@
 
 import { createClient as createServerClient } from '@/lib/supabaseServer'
 import { createClient } from '@supabase/supabase-js'
+import { headers } from 'next/headers'
 
 export async function inviteStaff(prevState: any, formData: FormData) {
     // Debug logging
@@ -53,8 +54,11 @@ export async function inviteStaff(prevState: any, formData: FormData) {
         return { error: 'Sila isi semua maklumat mandatori.' }
     }
 
-    // Double check site URL
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    // Get the dynamic site URL from headers
+    const headersList = await headers()
+    const host = headersList.get('host')
+    const protocol = host?.includes('localhost') ? 'http' : 'https'
+    const siteUrl = `${protocol}://${host}`
 
     try {
         const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {

@@ -2,7 +2,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { LogOut, FolderPlus, Trash2, FolderOpen, User, Edit3, X, Check, Briefcase, Shield, Crown, Filter, Camera, Loader2, Building2, Calendar, Clock, ChevronDown, Sun, Moon, UserPlus } from 'lucide-react'
+import { LogOut, FolderPlus, Trash2, FolderOpen, User, Edit3, X, Check, Briefcase, Shield, Crown, Filter, Camera, Loader2, Building2, Calendar, Clock, ChevronDown, Sun, Moon, UserPlus, MapPin, Send, CheckCircle2, XCircle } from 'lucide-react'
 import { useTheme } from '@/lib/ThemeProvider'
 
 // Define types
@@ -16,6 +16,17 @@ type Project = {
   status?: string;
   color?: string;
 }
+type WorkingRequest = {
+  id: number;
+  user_id: string;
+  type: 'WFH' | 'Remote' | 'Lapangan';
+  start_date: string;
+  end_date: string;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  profiles?: { full_name: string; avatar_url: string | null };
+}
 
 export default function Dashboard() {
   const router = useRouter()
@@ -25,6 +36,7 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
   const [staffList, setStaffList] = useState<Profile[]>([])
+  const [workingRequests, setWorkingRequests] = useState<WorkingRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
 
@@ -38,6 +50,16 @@ export default function Dashboard() {
   const [newProjectDesc, setNewProjectDesc] = useState('')
   const [newProjectStatus, setNewProjectStatus] = useState('active')
   const [newProjectColor, setNewProjectColor] = useState('neo-yellow')
+
+  // Working Request Modal State
+  const [showWorkModal, setShowWorkModal] = useState(false)
+  const [reqLoading, setReqLoading] = useState(false)
+  const [reqForm, setReqForm] = useState({
+    type: 'WFH',
+    start_date: '',
+    end_date: '',
+    reason: ''
+  })
 
   // Live Date State
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -84,6 +106,14 @@ export default function Dashboard() {
       const { data: allStaff } = await supabase.from('profiles').select('*').order('full_name', { ascending: true })
       setStaffList(allStaff || [])
     }
+
+    // 4. Tarik Permohonan Kerja (WFH/Remote/Lapangan)
+    const { data: reqs } = await supabase
+      .from('working_requests')
+      .select('*, profiles:user_id(full_name, avatar_url)')
+      .order('created_at', { ascending: false })
+
+    setWorkingRequests(reqs || [])
 
     setLoading(false)
   }
@@ -228,6 +258,44 @@ export default function Dashboard() {
       const { error } = await supabase.from('projects').delete().eq('id', id)
       if (error) alert('Error deleting project: ' + error.message)
       else fetchData()
+    }
+  }
+
+  // --- FUNGSI PERMOHONAN KERJA ---
+  const handleAddRequest = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setReqLoading(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { error } = await supabase.from('working_requests').insert([{
+      ...reqForm,
+      user_id: user.id,
+      status: 'pending'
+    }])
+
+    if (error) alert(error.message)
+    else {
+      setShowWorkModal(false)
+      fetchData()
+      setReqForm({ type: 'WFH', start_date: '', end_date: '', reason: '' })
+      alert('Permohonan anda telah dihantar untuk kelulusan admin.')
+    }
+    setReqLoading(false)
+  }
+
+  const handleUpdateStatus = async (id: number, status: 'approved' | 'rejected') => {
+    if (profile?.role !== 'admin') return
+
+    const { error } = await supabase
+      .from('working_requests')
+      .update({ status })
+      .eq('id', id)
+
+    if (error) alert(error.message)
+    else {
+      alert(`Permohonan telah ${status === 'approved' ? 'diluluskan' : 'ditolak'}.`)
+      fetchData()
     }
   }
 
@@ -405,6 +473,15 @@ export default function Dashboard() {
                 <span>Urus Staff</span>
               </button>
             )}
+            {!isAdmin && (
+              <button
+                onClick={() => setShowWorkModal(true)}
+                className="w-full md:w-auto bg-black text-white border-2 border-black px-6 py-2.5 font-black uppercase tracking-wide rounded-lg shadow-[2px_2px_0px_0px_rgba(253,224,71,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2 group"
+              >
+                <MapPin size={18} className="text-neo-yellow group-hover:scale-110 transition-transform" />
+                <span>Mohon Lokasi</span>
+              </button>
+            )}
             {isAdmin && (
               <button
                 onClick={() => setShowModal(true)}
@@ -417,6 +494,71 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* WORKING REQUESTS SECTION (Pending for Admin, All for User) */}
+      {(workingRequests.length > 0) && (
+        <div className="mb-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="bg-black text-white p-2 rounded-lg"><Calendar size={20} /></div>
+            <div>
+              <h2 className="text-xl font-black uppercase italic leading-none dark:text-white">
+                {isAdmin ? 'Permohonan Menunggu Kelulusan' : 'Status Permohonan Kerja'}
+              </h2>
+              <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mt-0.5">
+                {isAdmin ? 'Semakan permohonan WFH, Remote & Lapangan' : 'Rekod permohonan lokasi luar pejabat'}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {workingRequests.filter(r => isAdmin ? r.status === 'pending' : true).map((req) => (
+              <div key={req.id} className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] flex flex-col gap-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full border-2 border-black bg-zinc-100 overflow-hidden">
+                      {req.profiles?.avatar_url ? <img src={req.profiles.avatar_url} className="w-full h-full object-cover" /> : <User size={16} className="m-auto mt-1" />}
+                    </div>
+                    <div>
+                      <p className="text-xs font-black uppercase leading-none dark:text-white">{req.profiles?.full_name || 'Staff'}</p>
+                      <p className="text-[9px] font-bold text-zinc-400 uppercase">{new Date(req.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <span className={`text-[10px] font-black uppercase px-2 py-1 rounded border-2 border-black ${req.status === 'pending' ? 'bg-neo-yellow' :
+                      req.status === 'approved' ? 'bg-green-400' : 'bg-red-400 text-white'
+                    }`}>
+                    {req.status}
+                  </span>
+                </div>
+
+                <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-lg border-2 border-black/5 dark:border-white/5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="bg-black text-white text-[9px] font-black px-2 py-0.5 rounded">{req.type}</span>
+                    <span className="text-[10px] font-bold dark:text-zinc-300 italic">{req.start_date} → {req.end_date}</span>
+                  </div>
+                  <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400 line-clamp-2">"{req.reason || 'Tiada alasan disediakan.'}"</p>
+                </div>
+
+                {isAdmin && req.status === 'pending' && (
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      onClick={() => handleUpdateStatus(req.id, 'approved')}
+                      className="flex-1 bg-green-400 hover:bg-green-500 border-2 border-black py-2 rounded-lg text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all"
+                    >
+                      Luluskan
+                    </button>
+                    <button
+                      onClick={() => handleUpdateStatus(req.id, 'rejected')}
+                      className="flex-1 bg-red-400 hover:bg-red-500 text-white border-2 border-black py-2 rounded-lg text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all"
+                    >
+                      Tolak
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* PROJECTS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -554,6 +696,79 @@ export default function Dashboard() {
                 <button type="button" onClick={resetModal} className="bg-zinc-200 hover:bg-white text-black border-2 border-black font-black uppercase tracking-wide py-3.5 rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">Batal</button>
                 <button type="submit" className="bg-neo-primary hover:brightness-110 text-white border-2 border-black font-black uppercase tracking-wide py-3.5 rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">{editingProject ? 'Simpan' : 'Cipta'}</button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* WORKING REQUEST MODAL */}
+      {showWorkModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-md border-4 border-black dark:border-white rounded-xl shadow-[8px_8px_0px_0px_rgba(253,224,71,1)] animate-in zoom-in-95 overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b-4 border-black dark:border-white">
+              <h3 className="text-3xl font-black uppercase italic tracking-tighter transform -skew-x-6 dark:text-white flex items-center gap-3">
+                <MapPin className="text-neo-yellow" /> Permohonan
+              </h3>
+              <button onClick={() => setShowWorkModal(false)} className="bg-red-100 hover:bg-red-500 hover:text-white border-2 border-transparent hover:border-black p-2 rounded-lg transition-all"><X size={20} className="text-black" /></button>
+            </div>
+            <form onSubmit={handleAddRequest} className="p-6 space-y-5">
+              <div className="space-y-2">
+                <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white">Jenis Permohonan</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['WFH', 'Remote', 'Lapangan'].map(t => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setReqForm({ ...reqForm, type: t as any })}
+                      className={`py-2 border-2 border-black rounded-lg text-xs font-black uppercase transition-all ${reqForm.type === t ? 'bg-neo-yellow shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -translate-y-0.5' : 'bg-zinc-50 dark:bg-zinc-800 dark:text-white'
+                        }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white">Tarikh Mula</label>
+                  <input
+                    type="date"
+                    required
+                    className="w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-black rounded-lg p-3 font-bold text-xs dark:text-white outline-none"
+                    value={reqForm.start_date}
+                    onChange={e => setReqForm({ ...reqForm, start_date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white">Tarikh Tamat</label>
+                  <input
+                    type="date"
+                    required
+                    className="w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-black rounded-lg p-3 font-bold text-xs dark:text-white outline-none"
+                    value={reqForm.end_date}
+                    onChange={e => setReqForm({ ...reqForm, end_date: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white">Sebab / Alasan</label>
+                <textarea
+                  required
+                  className="w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-black rounded-lg p-3 font-medium text-sm dark:text-white outline-none h-24 resize-none"
+                  placeholder="Kenapa anda memohon lokasi ini?"
+                  value={reqForm.reason}
+                  onChange={e => setReqForm({ ...reqForm, reason: e.target.value })}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={reqLoading}
+                className="w-full bg-black text-white border-4 border-black rounded-xl py-4 font-black uppercase text-sm tracking-widest shadow-[4px_4px_0px_0px_rgba(253,224,71,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+              >
+                {reqLoading ? <Loader2 className="animate-spin" /> : <><Send size={18} /> Hantar Permohonan</>}
+              </button>
             </form>
           </div>
         </div>

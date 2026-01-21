@@ -74,7 +74,7 @@ export default function InviteStaffPage() {
             <div className="absolute inset-0 z-0 pointer-events-none">
 
                 {/* 1. Scrolling Marquee Text (Diagonal) */}
-                <div className="absolute inset-0 flex flex-col justify-center items-center overflow-hidden -rotate-12 translate-z-0">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] h-[200%] flex flex-col justify-center items-center overflow-hidden -rotate-12 translate-z-0">
                     {[...Array(20)].map((_, i) => (
                         <div key={i} className={`flex whitespace-nowrap font-black text-[12rem] uppercase leading-[0.85] text-black/5 ${i % 2 === 0 ? 'animate-marquee-left' : 'animate-marquee-right'}`}>
                             <span>{"ADMIN PORTAL ".repeat(20)}</span>

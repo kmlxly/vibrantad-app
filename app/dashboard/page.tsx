@@ -163,6 +163,11 @@ export default function Dashboard() {
       user_id: user.id
     }
 
+    if (profile?.role !== 'admin') {
+      alert('Hanya admin dibenarkan melakukan tindakan ini.')
+      return
+    }
+
     try {
       if (editingProject) {
         // PERCUBAAN 1: Update Semua Kolum
@@ -215,6 +220,10 @@ export default function Dashboard() {
   }
 
   const handleDeleteProject = async (id: number) => {
+    if (profile?.role !== 'admin') {
+      alert('Hanya admin dibenarkan memadam projek.')
+      return
+    }
     if (confirm('Adakah anda pasti mahu memadam projek ini?')) {
       const { error } = await supabase.from('projects').delete().eq('id', id)
       if (error) alert('Error deleting project: ' + error.message)
@@ -396,10 +405,15 @@ export default function Dashboard() {
                 <span>Urus Staff</span>
               </button>
             )}
-            <button onClick={() => setShowModal(true)} className="w-full md:w-auto bg-neo-primary text-white border-2 border-black dark:border-white px-6 py-2.5 font-black uppercase tracking-wide rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.5)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2 group">
-              <FolderPlus size={18} className="group-hover:rotate-12 transition-transform" />
-              <span>Tambah Projek</span>
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => setShowModal(true)}
+                className="w-full md:w-auto bg-neo-primary text-white border-2 border-black dark:border-white px-6 py-2.5 font-black uppercase tracking-wide rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.5)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2 group"
+              >
+                <FolderPlus size={18} className="group-hover:rotate-12 transition-transform" />
+                <span>Tambah Projek</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -445,11 +459,13 @@ export default function Dashboard() {
                     </span>
                   </div>
 
-                  {/* Floating Actions */}
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute top-4 right-4 bg-white/90 backdrop-blur border border-black rounded-full p-1 shadow-sm z-10">
-                    <button onClick={(e) => handleEditClick(e, proj)} className="p-1.5 hover:bg-neo-yellow rounded-full text-black transition-colors" title="Edit"><Edit3 size={14} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDeleteProject(proj.id); }} className="p-1.5 hover:bg-red-500 hover:text-white rounded-full text-red-500 transition-colors" title="Delete"><Trash2 size={14} /></button>
-                  </div>
+                  {/* Floating Actions - ADMIN ONLY */}
+                  {isAdmin && (
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute top-4 right-4 bg-white/90 backdrop-blur border border-black rounded-full p-1 shadow-sm z-10">
+                      <button onClick={(e) => handleEditClick(e, proj)} className="p-1.5 hover:bg-neo-yellow rounded-full text-black transition-colors" title="Edit"><Edit3 size={14} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteProject(proj.id); }} className="p-1.5 hover:bg-red-500 hover:text-white rounded-full text-red-500 transition-colors" title="Delete"><Trash2 size={14} /></button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mb-4">

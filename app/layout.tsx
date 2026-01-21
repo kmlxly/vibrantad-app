@@ -25,7 +25,6 @@ export default function RootLayout({
     <html lang="ms" className={publicSans.variable}>
       <body suppressHydrationWarning className="bg-neo-bg text-neo-dark min-h-screen flex flex-col selection:bg-neo-yellow selection:text-neo-dark font-sans transition-colors duration-300 dark:bg-zinc-950 dark:text-white">
         <ThemeProvider>
-          <SessionChecker />
           {children}
         </ThemeProvider>
       </body>

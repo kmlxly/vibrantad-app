@@ -87,11 +87,37 @@ export default function Dashboard() {
     fetchData()
   }, [selectedStaffId])
 
-  // Poll for online status every 30 seconds
+  // Poll for online status & Send Heartbeat every 30 seconds
   useEffect(() => {
     const pollInterval = setInterval(async () => {
-      const { data: allStaff } = await supabase.from('profiles').select('*').order('full_name', { ascending: true })
-      setStaffList(allStaff || [])
+      // 1. Send Heartbeat
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        await supabase
+          .from('profiles')
+          .update({ last_seen: new Date().toISOString() })
+          .eq('id', session.user.id)
+      }
+
+      // 2. Refresh Staff List (including sorting)
+      const { data: allStaffRaw } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, last_seen, job_title, role') // Select necessary cols only
+        .order('full_name', { ascending: true })
+
+      const allStaff = allStaffRaw || []
+
+      // Sort logic (User always first)
+      if (session) {
+        const sortedStaff = [
+          ...allStaff.filter(s => s.id === session.user.id),
+          ...allStaff.filter(s => s.id !== session.user.id).sort((a, b) => a.full_name.localeCompare(b.full_name))
+        ]
+        setStaffList(sortedStaff)
+      } else {
+        setStaffList(allStaff)
+      }
+
     }, 30000)
     return () => clearInterval(pollInterval)
   }, [])

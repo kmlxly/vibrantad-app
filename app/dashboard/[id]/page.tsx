@@ -90,56 +90,48 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
   }, [])
 
   const fetchProjectData = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    // Guna getSession lebih laju
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    const user = session.user
     setUserId(user.id)
 
-    // 0. Get User Profile & Role
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    setUserRole(profile?.role || 'user')
+    // Parallel fetch untuk semua data projek
+    const [profileRes, projRes, reportsRes, notesRes, workRes] = await Promise.all([
+      supabase.from('profiles').select('role').eq('id', user.id).single(),
+      supabase.from('projects').select('name, color').eq('id', projectId).single(),
+      supabase.from('reports').select('*, profiles:user_id(full_name, avatar_url)').eq('project_id', projectId).order('created_at', { ascending: false }),
+      supabase.from('project_notes').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
+      supabase.from('working_requests').select('*').eq('status', 'approved')
+    ])
 
-    // 1. Get Project Name & Color
-    const { data: proj } = await supabase.from('projects').select('name, color').eq('id', projectId).single()
-    if (proj) {
-      setProjectName(proj.name)
-      if (proj.color) setProjectColor(proj.color)
+    // Set Role & Profile
+    const profileRole = profileRes.data?.role || 'user'
+    setUserRole(profileRole)
+
+    // Set Project Info
+    if (projRes.data) {
+      setProjectName(projRes.data.name)
+      if (projRes.data.color) setProjectColor(projRes.data.color)
     }
 
-    // 2. Fetch Staff List if Admin (for filter dropdown)
-    if (profile?.role === 'admin' && staffList.length === 0) {
+    // Handle Reports (Filter by role if not admin)
+    let finalReports = reportsRes.data || []
+    if (profileRole !== 'admin') {
+      finalReports = finalReports.filter(r => r.user_id === user.id)
+    } else if (selectedStaffId !== 'all') {
+      finalReports = finalReports.filter(r => r.user_id === selectedStaffId)
+    }
+
+    // Fetch Staff List if Admin
+    if (profileRole === 'admin' && staffList.length === 0) {
       const { data: allStaff } = await supabase.from('profiles').select('id, full_name').order('full_name', { ascending: true })
       setStaffList(allStaff || [])
     }
 
-    // 3. Logic Fetch Laporan mengikut Role & Filter
-    let query = supabase
-      .from('reports')
-      .select('*, profiles:user_id(full_name, avatar_url)')
-      .eq('project_id', projectId)
-      .order('created_at', { ascending: false })
-
-    if (profile?.role !== 'admin') {
-      // Staff view: Hanya nampak report sendiri
-      query = query.eq('user_id', user.id)
-    } else if (selectedStaffId !== 'all') {
-      // Admin filter: Nampak report staff spesifik
-      query = query.eq('user_id', selectedStaffId)
-    }
-
-    const { data: reportList } = await query
-
-    // 4. Get Manual Notes
-    const { data: noteList } = await supabase.from('project_notes').select('*').eq('project_id', projectId).order('created_at', { ascending: false })
-
-    // 5. Get Approved Working Requests to cross-reference
-    const { data: workReqs } = await supabase
-      .from('working_requests')
-      .select('*')
-      .eq('status', 'approved')
-
-    setReports(reportList || [])
-    setNotes(noteList || [])
-    setWorkingRequests(workReqs || [])
+    setReports(finalReports)
+    setNotes(notesRes.data || [])
+    setWorkingRequests(workRes.data || [])
     setLoading(false)
   }
 

@@ -57,6 +57,20 @@ export default function LoginPage() {
       setError(error.message)
       setLoading(false)
     } else {
+      // Register this device as the active session
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        const deviceId = crypto.randomUUID()
+        localStorage.setItem('vibrant_device_id', deviceId)
+
+        // Only update DB if NOT localhost to preserve Production session
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+          await supabase
+            .from('profiles')
+            .update({ active_session_id: deviceId })
+            .eq('id', session.user.id)
+        }
+      }
       router.push('/dashboard')
     }
   }

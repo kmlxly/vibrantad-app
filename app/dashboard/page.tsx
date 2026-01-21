@@ -7,7 +7,7 @@ import { useTheme } from '@/lib/ThemeProvider'
 import { notifyAllAdmins, notifyStaffStatusUpdate } from '@/app/actions/emailActions'
 
 // Define types
-type Profile = { id: string; full_name: string; job_title: string; role: string; company_name: string; avatar_url: string | null; email?: string }
+type Profile = { id: string; full_name: string; job_title: string; role: string; company_name?: string; avatar_url: string | null; email?: string; last_seen?: string }
 type Project = {
   id: number;
   name: string;
@@ -87,41 +87,70 @@ export default function Dashboard() {
     fetchData()
   }, [selectedStaffId])
 
-  const fetchData = async () => {
-    // 1. Cek User Session
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/'); return }
-
-    // 2. Tarik Profile User Semasa
-    const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-    setProfile(profileData)
-
-    // 3. Logic Fetch Projek (Global View)
-    const { data: projectData, error: projectError } = await supabase
-      .from('projects')
-      .select('*, profiles!user_id(full_name, avatar_url, email)')
-      .order('created_at', { ascending: false })
-
-    if (projectError) console.error('Error fetching projects:', projectError)
-    setProjects(projectData || [])
-
-    // Admin View: Fetch profiles for filtering
-    if (profileData?.role === 'admin' && staffList.length === 0) {
+  // Poll for online status every 30 seconds
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
       const { data: allStaff } = await supabase.from('profiles').select('*').order('full_name', { ascending: true })
       setStaffList(allStaff || [])
-    }
+    }, 30000)
+    return () => clearInterval(pollInterval)
+  }, [])
 
-    // 4. Tarik Permohonan Kerja
-    const { data: reqs, error: reqError } = await supabase
-      .from('working_requests')
-      .select('*, profiles!user_id(full_name, avatar_url, email)')
-      .order('created_at', { ascending: false })
+  const fetchData = async () => {
+    try {
+      // 1. Cek User Session (Guna getSession lebih laju untuk initial check)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { router.push('/'); return }
+      const user = session.user
 
-    if (reqError) {
-      console.error('Error fetching working requests:', reqError.message, reqError.details, reqError.hint)
+      // 2. Fetch SEMUA data dalam satu batch (PARALLEL)
+      const [profileResult, projectsResult, staffResult, requestsResult] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).single(),
+
+        supabase
+          .from('projects')
+          .select('*, profiles!user_id(full_name, avatar_url, email)')
+          .order('created_at', { ascending: false }),
+
+        supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url, last_seen, job_title, role')
+          .order('full_name', { ascending: true }),
+
+        supabase
+          .from('working_requests')
+          .select('*, profiles!user_id(full_name, avatar_url, email)')
+          .order('created_at', { ascending: false })
+      ])
+
+      // Set Profile
+      if (profileResult.data) setProfile(profileResult.data)
+
+      // Handle Projects
+      if (projectsResult.error) console.error('Error fetching projects:', projectsResult.error)
+      setProjects(projectsResult.data || [])
+
+      // Handle Staff List
+      if (staffResult.error) console.error('Error fetching staff list:', staffResult.error)
+      const allStaff = staffResult.data || []
+      // Sort: Current user first, then others alphabetically
+      const sortedStaff = [
+        ...allStaff.filter(s => s.id === user.id),
+        ...allStaff.filter(s => s.id !== user.id).sort((a, b) => a.full_name.localeCompare(b.full_name))
+      ]
+      setStaffList(sortedStaff)
+
+      // Handle Working Requests
+      if (requestsResult.error) {
+        console.error('Error fetching working requests:', requestsResult.error.message)
+      }
+      setWorkingRequests(requestsResult.data || [])
+
+    } catch (err) {
+      console.error("Dashboard fetch error:", err)
+    } finally {
+      setLoading(false)
     }
-    setWorkingRequests(reqs || [])
-    setLoading(false)
   }
 
   const handleUploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,8 +188,26 @@ export default function Dashboard() {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/')
+    try {
+      // 1. Clear session from DB so others see user as offline IMMEDIATELY
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        await supabase
+          .from('profiles')
+          .update({
+            active_session_id: null,
+            last_seen: null // or set to old date to be safe
+          })
+          .eq('id', session.user.id)
+      }
+    } catch (err) {
+      console.error("Logout cleanup error:", err)
+    } finally {
+      // 2. Clear local storage & Sign out
+      localStorage.removeItem('vibrant_device_id')
+      await supabase.auth.signOut()
+      router.push('/')
+    }
   }
 
   const baseColorMap: Record<string, string> = {
@@ -417,6 +464,42 @@ export default function Dashboard() {
       <div className="space-y-8 min-h-[400px]">
         {activeTab === 'projects' && (
           <div className="animate-in fade-in slide-in-from-bottom-5 duration-500">
+            {/* LIVE STAFF SECTION */}
+            <div className="mb-8 overflow-x-auto pb-4 scrollbar-hide">
+              <div className="flex items-center gap-2 mb-3 px-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,1)]"></div>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] dark:text-white flex items-center gap-2">
+                  Online Users <span className="text-zinc-400 font-bold px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded border border-black/5">{staffList.filter(s => s.last_seen && new Date().getTime() - new Date(s.last_seen).getTime() < 120000).length} Online</span>
+                </h3>
+              </div>
+              <div className="flex gap-4">
+                {staffList.map((staff) => {
+                  const isOnline = staff.last_seen && new Date().getTime() - new Date(staff.last_seen).getTime() < 120000; // 2 minutes window
+                  return (
+                    <div key={staff.id} className="flex flex-col items-center gap-2 group">
+                      <div className={`relative w-14 h-14 rounded-full border-4 ${isOnline ? 'border-green-400 p-0.5' : 'border-zinc-200 dark:border-zinc-800'} transition-all`}>
+                        <div className="w-full h-full rounded-full border-2 border-black overflow-hidden bg-white">
+                          {staff.avatar_url ? (
+                            <img src={staff.avatar_url} className="w-full h-full object-cover" alt={staff.full_name} />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-zinc-100 text-zinc-400">
+                              <User size={20} />
+                            </div>
+                          )}
+                        </div>
+                        {isOnline && (
+                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-zinc-900 rounded-full"></div>
+                        )}
+                      </div>
+                      <span className={`text-[9px] font-black uppercase truncate max-w-[60px] ${isOnline ? 'text-black dark:text-white' : 'text-zinc-400'}`}>
+                        {staff.full_name.split(' ')[0]}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* TOOLBAR */}
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8 bg-white dark:bg-zinc-900 border-2 border-black dark:border-white p-4 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <div className="flex items-center gap-3">

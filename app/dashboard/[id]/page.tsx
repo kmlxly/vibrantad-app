@@ -10,7 +10,7 @@ type Report = {
   title: string;
   status: string;
   type: 'project' | 'task';
-  working_location: 'Office' | 'WFH' | 'Lapangan';
+  working_location: 'Office' | 'WFH' | 'Lapangan' | 'Remote';
   start_date: string;
   end_date: string;
   task_date: string;
@@ -571,7 +571,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                           <MapPin size={14} className="text-zinc-400" /> Lokasi Bekerja
                         </label>
                         <div className="flex flex-wrap gap-2">
-                          {['Office', 'WFH', 'Lapangan'].map((loc) => (
+                          {['Office', 'WFH', 'Lapangan', 'Remote'].map((loc) => (
                             <label key={loc} className={`flex items-center gap-2 cursor-pointer px-4 py-2.5 rounded-lg border-2 transition-all ${formData.working_location === loc ? 'border-black bg-neo-yellow dark:border-white shadow-neo-sm -translate-y-0.5' : 'border-zinc-100 bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700'}`}>
                               <input type="radio" value={loc} checked={formData.working_location === loc} onChange={() => setFormData({ ...formData, working_location: loc as any })} className="hidden" />
                               <span className="font-bold text-[10px] uppercase dark:text-white">{loc}</span>

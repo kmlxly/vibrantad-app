@@ -2,7 +2,7 @@
 import { useEffect, useState, use, useRef } from 'react' // Import 'use' for params handling in Next 15/14
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, PlusCircle, Save, Calendar, CheckCircle2, AlertCircle, Rocket, X, FileText, ClipboardList, Edit3, Trash2, Printer, Share2, Filter, ChevronDown, User, LayoutList, LayoutGrid, Layout, MapPin, MessageSquare, Send } from 'lucide-react'
+import { ArrowLeft, PlusCircle, Save, Calendar, CheckCircle2, AlertCircle, Rocket, X, FileText, ClipboardList, Edit3, Trash2, Printer, Share2, Filter, ChevronDown, User, LayoutList, LayoutGrid, Layout, MapPin, MessageSquare, Send, ShieldCheck } from 'lucide-react'
 
 // Types
 type Report = {
@@ -29,6 +29,16 @@ type ReportComment = {
   profiles?: any;
 }
 type Note = { id: number; project_id: number; type: 'issue' | 'suggestion'; content: string; created_at: string }
+type WorkingRequest = {
+  id: number;
+  user_id: string;
+  type: 'WFH' | 'Remote' | 'Lapangan';
+  start_date: string;
+  end_date: string;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+}
 
 export default function ProjectDetails({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -42,6 +52,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
   const [projectColor, setProjectColor] = useState('neo-yellow') // Default color
   const [reports, setReports] = useState<Report[]>([])
   const [notes, setNotes] = useState<Note[]>([])
+  const [workingRequests, setWorkingRequests] = useState<WorkingRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState('')
   const [userRole, setUserRole] = useState('')
@@ -114,8 +125,15 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
     // 4. Get Manual Notes
     const { data: noteList } = await supabase.from('project_notes').select('*').eq('project_id', projectId).order('created_at', { ascending: false })
 
+    // 5. Get Approved Working Requests to cross-reference
+    const { data: workReqs } = await supabase
+      .from('working_requests')
+      .select('*')
+      .eq('status', 'approved')
+
     setReports(reportList || [])
     setNotes(noteList || [])
+    setWorkingRequests(workReqs || [])
     setLoading(false)
   }
 
@@ -349,6 +367,26 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
       setNoteForm({ type: 'issue', content: '' })
     }
     setShowNoteModal(true)
+  }
+
+  // Fungsi Cari Permohonan Lokasi yang Sah
+  const findApprovedRequest = (userId: string, date: string, location: string) => {
+    if (location === 'Office') return null; // Office tak perlukan permohonan
+
+    return workingRequests.find(req => {
+      const isUser = req.user_id === userId;
+      const isType = req.type.toLowerCase() === location.toLowerCase();
+      const reportDate = new Date(date);
+      const start = new Date(req.start_date);
+      const end = new Date(req.end_date);
+
+      // Set hours to 0 to compare dates accurately
+      reportDate.setHours(0, 0, 0, 0);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(0, 0, 0, 0);
+
+      return isUser && isType && reportDate >= start && reportDate <= end;
+    });
   }
 
   // Fungsi Warna Badge
@@ -877,6 +915,18 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                             <span className={`text-[9px] font-black uppercase tracking-tight px-2 py-0.5 rounded border ${report.status === 'Done' ? 'bg-green-100 text-green-700 border-green-200' : report.status === 'Blocked' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'}`}>
                               {report.status}
                             </span>
+                            {/* Verification Badge */}
+                            {(() => {
+                              const approvedReq = findApprovedRequest(report.user_id, report.task_date || report.start_date, report.working_location);
+                              if (approvedReq) {
+                                return (
+                                  <span className="flex items-center gap-1 text-[8px] font-black uppercase bg-green-500 text-white px-2 py-0.5 rounded-full shadow-sm animate-pulse border border-black/10" title={`Alasan: ${approvedReq.reason}`}>
+                                    <ShieldCheck size={10} /> Verified {report.working_location}
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
                           <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 line-clamp-1">
                             {report.outcome}
@@ -943,6 +993,17 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                                       <span className="flex items-center gap-1 text-[8px] font-bold text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
                                         <User size={8} className="text-blue-500" /> {Array.isArray(report.profiles) ? report.profiles[0]?.full_name?.split(' ')[0] : report.profiles?.full_name?.split(' ')[0] || 'Staff'}
                                       </span>
+                                      {(() => {
+                                        const approvedReq = findApprovedRequest(report.user_id, report.task_date || report.start_date, report.working_location);
+                                        if (approvedReq) {
+                                          return (
+                                            <span className="flex items-center gap-1 text-[7px] font-black uppercase bg-green-500 text-white px-1.5 py-0.5 rounded-full animate-pulse border border-black/10" title={`Alasan: ${approvedReq.reason}`}>
+                                              <ShieldCheck size={8} /> Verified
+                                            </span>
+                                          );
+                                        }
+                                        return null;
+                                      })()}
                                     </div>
                                   </div>
                                 </div>

@@ -29,31 +29,48 @@ export default function UpdatePasswordPage() {
                 console.log('Auth event change:', event, session ? 'Session Active' : 'No Session')
                 if (session) {
                     setIsCheckingSession(false)
-                    setError('') // Clear any "Auth missing" error if session finally arrives
+                    setError('')
                 }
             })
 
-            // Give it 2.5 seconds max
-            const timer = setTimeout(() => {
-                const hasTokenInURL = window.location.hash.includes('access_token')
+            // Fallback: Manually parse hash if getSession fail (common in redirects)
+            const handleHashSession = async () => {
+                const hash = window.location.hash
+                if (hash && hash.includes('access_token')) {
+                    const params = new URLSearchParams(hash.substring(1)) // remove #
+                    const accessToken = params.get('access_token')
+                    const refreshToken = params.get('refresh_token')
 
-                if (!hasTokenInURL) {
-                    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-                        if (!currentSession) {
-                            setError('Sesi tidak sah. Sila pastikan anda menekan pautan dari emel jemputan terbaharu.')
+                    if (accessToken && refreshToken) {
+                        console.log('Manual session recovery from hash...')
+                        const { data, error } = await supabase.auth.setSession({
+                            access_token: accessToken,
+                            refresh_token: refreshToken
+                        })
+
+                        if (!error && data.session) {
+                            console.log('Manual session set success')
+                            setIsCheckingSession(false)
+                            return
+                        } else {
+                            console.error('Manual session set failed:', error)
                         }
-                        setIsCheckingSession(false)
-                    })
-                } else {
-                    // We have a token, but session hasn't fired yet. 
-                    // Let's stop the loading spinner and see if it works on submit
-                    setIsCheckingSession(false)
+                    }
                 }
-            }, 2500)
+
+                // If we get here, check session one last time
+                const { data: { session: finalSession } } = await supabase.auth.getSession()
+                if (!finalSession) {
+                    setError('Sesi tidak sah. Sila pastikan anda menekan pautan dari emel jemputan terbaharu.')
+                }
+                setIsCheckingSession(false)
+            }
+
+            // Give Supabase client a moment to auto-detect, then try manual
+            setTimeout(handleHashSession, 1000)
 
             return () => {
                 subscription.unsubscribe()
-                clearTimeout(timer)
             }
         }
 

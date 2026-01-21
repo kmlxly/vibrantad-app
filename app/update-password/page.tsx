@@ -1,22 +1,46 @@
 'use client'
-import { useState } from 'react'
+
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { Loader2, ArrowRight, Lock } from 'lucide-react'
+import { Loader2, ArrowRight, Lock, AlertCircle } from 'lucide-react'
 
 export default function UpdatePasswordPage() {
     const router = useRouter()
     const [password, setPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
     const [loading, setLoading] = useState(false)
+    const [isCheckingSession, setIsCheckingSession] = useState(true)
     const [error, setError] = useState('')
     const [success, setSuccess] = useState('')
+
+    useEffect(() => {
+        const checkSession = async () => {
+            // Give it 500ms for Supabase to process the hash if it exists
+            setTimeout(async () => {
+                const { data: { session } } = await supabase.auth.getSession()
+
+                if (!session && !window.location.hash.includes('access_token')) {
+                    setError('Sesi tidak sah. Sila buka semula pautan dari emel anda.')
+                }
+                setIsCheckingSession(false)
+            }, 500)
+        }
+        checkSession()
+    }, [router])
 
     const handleUpdatePassword = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
         setError('')
         setSuccess('')
+
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+            setError('Auth session missing! Sila cuba buka semula pautan emel.')
+            setLoading(false)
+            return
+        }
 
         if (password.length < 6) {
             setError('Kata laluan mestilah sekurang-kurangnya 6 aksara')
@@ -43,6 +67,17 @@ export default function UpdatePasswordPage() {
                 router.push('/dashboard')
             }, 2000)
         }
+    }
+
+    if (isCheckingSession) {
+        return (
+            <div className="min-h-screen bg-neo-yellow flex flex-col items-center justify-center gap-4">
+                <div className="bg-white border-4 border-black p-8 rounded-xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center">
+                    <Loader2 className="animate-spin w-12 h-12 text-neo-primary mb-4" />
+                    <p className="font-black uppercase italic tracking-tighter text-xl">Mengesahkan Sesi...</p>
+                </div>
+            </div>
+        )
     }
 
     return (

@@ -20,7 +20,8 @@ export default function LoginPage() {
       // If there's a session and it's an invite flow (from hash)
       // Or if the user just clicked the link and landing here
       if (window.location.hash.includes('type=invite') || window.location.hash.includes('recovery')) {
-        router.push('/update-password')
+        // IMPORTANT: Pass the hash to the update-password page so it can be consumed there
+        router.replace('/update-password' + window.location.hash)
       } else if (session) {
         // If already logged in normally, go to dashboard
         router.push('/dashboard')
@@ -32,7 +33,8 @@ export default function LoginPage() {
     // Listen for auth state changes (especially for hash recovery)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && window.location.hash.includes('type=invite'))) {
-        router.push('/update-password')
+        // Use window.location as a fallback to ensure hash is preserved or fresh session is used
+        router.replace('/update-password' + window.location.hash)
       } else if (session && event === 'SIGNED_IN') {
         router.push('/dashboard')
       }

@@ -29,21 +29,27 @@ export default function UpdatePasswordPage() {
                 console.log('Auth event change:', event, session ? 'Session Active' : 'No Session')
                 if (session) {
                     setIsCheckingSession(false)
+                    setError('') // Clear any "Auth missing" error if session finally arrives
                 }
             })
 
-            // Give it 2 seconds max to detect session from hash
+            // Give it 2.5 seconds max
             const timer = setTimeout(() => {
-                setIsCheckingSession(false)
-                if (!window.location.hash.includes('access_token')) {
-                    // Only show error if no token is in URL and no session found
+                const hasTokenInURL = window.location.hash.includes('access_token')
+
+                if (!hasTokenInURL) {
                     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
                         if (!currentSession) {
                             setError('Sesi tidak sah. Sila pastikan anda menekan pautan dari emel jemputan terbaharu.')
                         }
+                        setIsCheckingSession(false)
                     })
+                } else {
+                    // We have a token, but session hasn't fired yet. 
+                    // Let's stop the loading spinner and see if it works on submit
+                    setIsCheckingSession(false)
                 }
-            }, 2000)
+            }, 2500)
 
             return () => {
                 subscription.unsubscribe()

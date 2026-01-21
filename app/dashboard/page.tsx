@@ -712,8 +712,8 @@ export default function Dashboard() {
       {showWorkModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-zinc-900 w-full max-w-md border-4 border-black dark:border-white rounded-2xl shadow-[8px_8px_0px_0px_rgba(253,224,71,1)] animate-in zoom-in-95">
-            <div className="p-6 border-b-4 border-black flex justify-between items-center bg-black text-white rounded-t-[14px]">
-              <h3 className="text-xl font-black uppercase italic">Mohon Lokasi</h3>
+            <div className="p-5 border-b-4 border-black flex justify-between items-center bg-black text-white rounded-t-[14px]">
+              <h3 className="text-lg sm:text-xl font-black uppercase italic">Mohon Lokasi</h3>
               <button onClick={() => setShowWorkModal(false)}><X size={24} /></button>
             </div>
             <form onSubmit={handleAddRequest} className="p-6 space-y-5">
@@ -725,7 +725,7 @@ export default function Dashboard() {
                   ))}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase tracking-widest dark:text-white">Mula</label>
                   <input type="date" required className="w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-black p-3 rounded-lg font-bold text-xs dark:text-white" value={reqForm.start_date} onChange={e => setReqForm({ ...reqForm, start_date: e.target.value })} />

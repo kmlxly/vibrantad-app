@@ -76,7 +76,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen w-full relative flex items-center justify-center overflow-hidden bg-neo-yellow selection:bg-black selection:text-white font-sans">
+    <div className="min-h-[100dvh] w-full relative flex items-center justify-center overflow-hidden bg-neo-yellow selection:bg-black selection:text-white font-sans">
 
       {/* --- BRUTALIST ANIMATED BACKGROUND --- */}
       <div className="absolute inset-0 z-0 pointer-events-none">

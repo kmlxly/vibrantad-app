@@ -122,7 +122,7 @@ export default function UpdatePasswordPage() {
 
     if (isCheckingSession) {
         return (
-            <div className="min-h-screen bg-neo-yellow flex flex-col items-center justify-center gap-4">
+            <div className="min-h-[100dvh] bg-neo-yellow flex flex-col items-center justify-center gap-4">
                 <div className="bg-white border-4 border-black p-8 rounded-xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center">
                     <Loader2 className="animate-spin w-12 h-12 text-neo-primary mb-4" />
                     <p className="font-black uppercase italic tracking-tighter text-xl">Mengesahkan Sesi...</p>
@@ -132,7 +132,7 @@ export default function UpdatePasswordPage() {
     }
 
     return (
-        <div className="min-h-screen w-full relative flex items-center justify-center overflow-hidden bg-neo-yellow selection:bg-black selection:text-white font-sans">
+        <div className="min-h-[100dvh] w-full relative flex items-center justify-center overflow-hidden bg-neo-yellow selection:bg-black selection:text-white font-sans">
 
             {/* --- BRUTALIST ANIMATED BACKGROUND --- */}
             <div className="absolute inset-0 z-0 pointer-events-none">

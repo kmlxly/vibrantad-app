@@ -61,14 +61,14 @@ export default function InviteStaffPage() {
 
     if (isAuthorized === null) {
         return (
-            <div className="min-h-screen bg-neo-yellow flex items-center justify-center">
+            <div className="min-h-[100dvh] bg-neo-yellow flex items-center justify-center">
                 <Loader2 className="animate-spin w-10 h-10 text-black" />
             </div>
         )
     }
 
     return (
-        <div className="min-h-screen w-full relative flex items-center justify-center overflow-hidden bg-neo-yellow selection:bg-black selection:text-white font-sans">
+        <div className="min-h-[100dvh] w-full relative flex items-center justify-center overflow-hidden bg-neo-yellow selection:bg-black selection:text-white font-sans">
 
             {/* --- BRUTALIST ANIMATED BACKGROUND --- */}
             <div className="absolute inset-0 z-0 pointer-events-none">

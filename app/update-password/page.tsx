@@ -15,18 +15,43 @@ export default function UpdatePasswordPage() {
     const [success, setSuccess] = useState('')
 
     useEffect(() => {
-        const checkSession = async () => {
-            // Give it 500ms for Supabase to process the hash if it exists
-            setTimeout(async () => {
-                const { data: { session } } = await supabase.auth.getSession()
-
-                if (!session && !window.location.hash.includes('access_token')) {
-                    setError('Sesi tidak sah. Sila buka semula pautan dari emel anda.')
-                }
+        const checkInitialSession = async () => {
+            // Check if we have a session immediately
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session) {
+                console.log('Session found on load')
                 setIsCheckingSession(false)
-            }, 500)
+                return
+            }
+
+            // If no session, wait for hash processing or auth state change
+            const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+                console.log('Auth event change:', event, session ? 'Session Active' : 'No Session')
+                if (session) {
+                    setIsCheckingSession(false)
+                }
+            })
+
+            // Give it 2 seconds max to detect session from hash
+            const timer = setTimeout(() => {
+                setIsCheckingSession(false)
+                if (!window.location.hash.includes('access_token')) {
+                    // Only show error if no token is in URL and no session found
+                    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+                        if (!currentSession) {
+                            setError('Sesi tidak sah. Sila pastikan anda menekan pautan dari emel jemputan terbaharu.')
+                        }
+                    })
+                }
+            }, 2000)
+
+            return () => {
+                subscription.unsubscribe()
+                clearTimeout(timer)
+            }
         }
-        checkSession()
+
+        checkInitialSession()
     }, [router])
 
     const handleUpdatePassword = async (e: React.FormEvent) => {
@@ -35,9 +60,12 @@ export default function UpdatePasswordPage() {
         setError('')
         setSuccess('')
 
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
-            setError('Auth session missing! Sila cuba buka semula pautan emel.')
+        // Ensure we have the latest session
+        const { data: { session: currentSession } } = await supabase.auth.getSession()
+
+        if (!currentSession) {
+            // Try one last check of auth state
+            setError('Auth session missing! Sila cuba muat semula (refresh) halaman ini dan cuba lagi.')
             setLoading(false)
             return
         }

@@ -63,7 +63,7 @@ export default function SessionChecker() {
                 // We want Heartbeat to work on Localhost too, so you can see yourself live!
                 heartbeatCounter += 10;
                 if (heartbeatCounter >= 30) {
-                    console.log("Sending Heartbeat...")
+                    // console.log("Sending Heartbeat...") // Optional debug
                     await supabase
                         .from('profiles')
                         .update({ last_seen: new Date().toISOString() })
@@ -71,32 +71,9 @@ export default function SessionChecker() {
                     heartbeatCounter = 0;
                 }
 
-                // --- SESSION CHECK ---
-                // Fetch ONLY active_session_id to save bandwidth
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('active_session_id')
-                    .eq('id', session.user.id)
-                    .single()
-
-                const localDeviceId = localStorage.getItem('vibrant_device_id')
-
-                // Only enforce if both values exist
-                if (profile?.active_session_id && localDeviceId) {
-                    if (profile.active_session_id !== localDeviceId) {
-                        // BYPASS FOR LOCALHOST DEV
-                        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                            console.warn("Session mismatch detected! But ignored on Localhost for development.")
-                            return
-                        }
-
-                        console.log("Session mismatch detected. Logging out.")
-                        await supabase.auth.signOut()
-                        localStorage.removeItem('vibrant_device_id')
-                        alert("Sesi anda telah tamat kerana log masuk di peranti lain.")
-                        router.push('/')
-                    }
-                }
+                // --- SESSION ENFORCEMENT REMOVED ---
+                // We removed the single-session check to prevent looping issues between Localhost & Production.
+                // Users can now be logged in on multiple devices, but "Online Status" will still work via Heartbeat above.
             } catch (err) {
                 console.error("Session check error (silent):", err)
             }

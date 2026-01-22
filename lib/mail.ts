@@ -1,14 +1,19 @@
 import nodemailer from 'nodemailer'
 
-export const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT) || 465,
-    secure: Number(process.env.SMTP_PORT) === 465,
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    },
-    tls: {
-        rejectUnauthorized: false // Benarkan sijil cPanel yang tidak sah/expired
-    }
-})
+export const createTransporter = () => {
+    const host = process.env.SMTP_HOST
+    const port = Number(process.env.SMTP_PORT) || 465
+
+    return nodemailer.createTransport({
+        host: host,
+        port: port,
+        secure: port === 465,
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+        },
+        tls: {
+            rejectUnauthorized: false
+        }
+    })
+}

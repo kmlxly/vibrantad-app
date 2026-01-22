@@ -1,6 +1,6 @@
 'use server'
 
-import { transporter } from '@/lib/mail'
+import { createTransporter } from '@/lib/mail'
 
 interface EmailParams {
   to: string
@@ -11,6 +11,12 @@ interface EmailParams {
 
 export async function sendEmail({ to, subject, text, html }: EmailParams) {
   try {
+    if (!process.env.SMTP_HOST) {
+      console.error('SMTP Config Missing: SMTP_HOST is not set.')
+      return { success: false, error: 'Konfigurasi SMTP (SMTP_HOST) tidak dijumpai dalam .env' }
+    }
+
+    const transporter = createTransporter()
     const info = await transporter.sendMail({
       from: {
         name: process.env.SMTP_FROM_NAME?.replace(/"/g, '') || 'Vibrant Staff System',

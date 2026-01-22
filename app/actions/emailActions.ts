@@ -12,7 +12,10 @@ interface EmailParams {
 export async function sendEmail({ to, subject, text, html }: EmailParams) {
   try {
     const info = await transporter.sendMail({
-      from: `"${process.env.SMTP_FROM_NAME || 'Vibrant Staff System'}" <${process.env.SMTP_FROM}>`,
+      from: {
+        name: process.env.SMTP_FROM_NAME?.replace(/"/g, '') || 'Vibrant Staff System',
+        address: process.env.SMTP_FROM as string
+      },
       to,
       subject,
       text,

@@ -3,7 +3,8 @@ import { useEffect, useState, use, useRef } from 'react' // Import 'use' for par
 import imageCompression from 'browser-image-compression'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, PlusCircle, Save, Calendar, CheckCircle2, AlertCircle, Rocket, X, FileText, ClipboardList, Edit3, Trash2, Printer, Share2, Filter, ChevronDown, User, LayoutList, LayoutGrid, Layout, MapPin, MessageSquare, Send, ShieldCheck, Paperclip, Link, ExternalLink, RefreshCw } from 'lucide-react'
+import { ArrowLeft, PlusCircle, Save, Calendar, CheckCircle2, AlertCircle, Rocket, X, FileText, ClipboardList, Edit3, Trash2, Printer, Share2, Filter, ChevronDown, User, LayoutList, LayoutGrid, Layout, MapPin, MessageSquare, Send, ShieldCheck, Paperclip, Link, ExternalLink, RefreshCw, LogOut, Moon, Sun } from 'lucide-react'
+import { useTheme } from '@/lib/ThemeProvider'
 
 // Types
 type Report = {
@@ -43,13 +44,11 @@ type WorkingRequest = {
   created_at: string;
 }
 
-export default function ProjectDetails({ params }: { params: Promise<{ id: string }> }) {
+export default function ProjectPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = use(paramsPromise)
+  const projectId = params.id
   const router = useRouter()
-  // React.use() untuk unwrap params (Syntax baru Next.js)
-  const resolvedParams = use(params)
-  const projectId = resolvedParams.id
-
-
+  const { theme, toggleTheme } = useTheme()
 
   const [projectName, setProjectName] = useState('')
   const [projectColor, setProjectColor] = useState('neo-yellow') // Default color
@@ -57,7 +56,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
   const [notes, setNotes] = useState<Note[]>([])
   const [workingRequests, setWorkingRequests] = useState<WorkingRequest[]>([])
   const [loading, setLoading] = useState(true)
-  const [userId, setUserId] = useState('')
+  const [userId, setUserId] = useState<string | null>(null)
   const [userRole, setUserRole] = useState('')
   const [staffList, setStaffList] = useState<{ id: string, full_name: string }[]>([])
   const [selectedStaffId, setSelectedStaffId] = useState('all')
@@ -67,6 +66,25 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
   const [comments, setComments] = useState<ReportComment[]>([])
   const [newComment, setNewComment] = useState('')
   const [commentLoading, setCommentLoading] = useState(false)
+
+  const handleLogout = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        supabase
+          .from('profiles')
+          .update({ active_session_id: null, last_seen: null })
+          .eq('id', session.user.id)
+          .then(() => { })
+      }
+    } catch (err) {
+      console.error("Logout cleanup error:", err)
+    } finally {
+      localStorage.removeItem('vibrant_device_id')
+      await supabase.auth.signOut()
+      window.location.href = '/'
+    }
+  }
 
   // Form State
   const [showForm, setShowForm] = useState(false)
@@ -515,14 +533,30 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
 
           {/* LEFT: Project Meta & Actions (Compact Sidebar) - HIDDEN ON PRINT */}
           <div className="lg:col-span-4 flex flex-col gap-4 print:hidden">
-            {/* Back Button */}
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="w-full sm:w-fit group flex items-center justify-center sm:justify-start gap-3 font-black uppercase text-xs tracking-wider bg-white hover:bg-black hover:text-neo-yellow border-2 border-black px-4 py-3 rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all dark:bg-zinc-900 dark:text-white dark:border-white dark:hover:bg-white dark:hover:text-black shrink-0"
-            >
-              <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-              Kembali
-            </button>
+            {/* Header Actions: Back, Theme, Logout */}
+            <div className="flex gap-2 print:hidden w-full sm:w-auto">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="flex-1 sm:flex-none group flex items-center justify-center gap-3 font-black uppercase text-xs tracking-wider bg-white hover:bg-black hover:text-neo-yellow border-2 border-black px-4 py-3 rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all dark:bg-zinc-900 dark:text-white dark:border-white dark:hover:bg-white dark:hover:text-black"
+              >
+                <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                Kembali
+              </button>
+
+              <button
+                onClick={toggleTheme}
+                className="bg-white text-black border-2 border-black p-2 rounded-lg hover:bg-neo-yellow transition-colors flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none dark:bg-zinc-900 dark:text-white dark:border-white"
+              >
+                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="bg-white text-black border-2 border-black p-2 rounded-lg hover:bg-neo-primary hover:text-white transition-colors flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none dark:bg-zinc-900 dark:text-white dark:border-white"
+              >
+                <LogOut size={20} />
+              </button>
+            </div>
 
             {/* Share & Print Actions */}
             <div className="flex gap-2 print:hidden">

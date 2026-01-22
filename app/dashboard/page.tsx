@@ -219,13 +219,15 @@ export default function Dashboard() {
       // 1. Clear session from DB so others see user as offline IMMEDIATELY
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
-        await supabase
+        // Use non-blocking update
+        supabase
           .from('profiles')
           .update({
             active_session_id: null,
-            last_seen: null // or set to old date to be safe
+            last_seen: null
           })
           .eq('id', session.user.id)
+          .then(() => { })
       }
     } catch (err) {
       console.error("Logout cleanup error:", err)
@@ -233,7 +235,8 @@ export default function Dashboard() {
       // 2. Clear local storage & Sign out
       localStorage.removeItem('vibrant_device_id')
       await supabase.auth.signOut()
-      router.push('/')
+      // Use window.location.href to force a clean slate on the login page
+      window.location.href = '/'
     }
   }
 
@@ -477,16 +480,16 @@ export default function Dashboard() {
       </header>
 
       {/* DASHBOARD TABS */}
-      <div className="flex gap-2 mb-8 bg-zinc-100 dark:bg-zinc-800 p-1.5 rounded-2xl w-full sm:w-fit overflow-x-auto scrollbar-hide">
+      <div className="grid grid-cols-2 sm:flex gap-2 mb-8 bg-zinc-100 dark:bg-zinc-800 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl w-full sm:w-fit">
         <button
           onClick={() => setActiveTab('projects')}
-          className={`px-6 py-3 rounded-xl font-black uppercase text-xs transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'projects' ? 'bg-black text-white shadow-lg' : 'text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+          className={`px-3 sm:px-6 py-3 rounded-lg sm:rounded-xl font-black uppercase text-[10px] sm:text-xs transition-all flex items-center justify-center gap-2 whitespace-nowrap ${activeTab === 'projects' ? 'bg-black text-white shadow-lg' : 'text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
         >
           <FolderOpen size={16} /> Projek Client
         </button>
         <button
           onClick={() => setActiveTab('working')}
-          className={`px-6 py-3 rounded-xl font-black uppercase text-xs transition-all flex items-center gap-2 relative whitespace-nowrap ${activeTab === 'working' ? 'bg-black text-white shadow-lg' : 'text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+          className={`px-3 sm:px-6 py-3 rounded-lg sm:rounded-xl font-black uppercase text-[10px] sm:text-xs transition-all flex items-center justify-center gap-2 relative whitespace-nowrap ${activeTab === 'working' ? 'bg-black text-white shadow-lg' : 'text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
         >
           <MapPin size={16} /> Log Lokasi
           {isAdmin || isHR ? (

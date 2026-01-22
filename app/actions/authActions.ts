@@ -4,17 +4,22 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { sendEmail } from './emailActions'
 import { headers } from 'next/headers'
 
-export async function requestPasswordReset(email: string) {
+export async function requestPasswordReset(emailInput: string) {
+  const email = emailInput?.trim().toLowerCase()
   if (!email) {
     return { error: 'Sila masukkan alamat emel anda.' }
   }
+
+  console.log(`[Auth] Requesting password reset for: ${email}`)
 
   try {
     // Get the dynamic site URL for the reset link
     const headersList = await headers()
     const host = headersList.get('host')
-    const protocol = host?.includes('localhost') ? 'http' : 'https'
+    const protocol = host?.includes('localhost') || host?.includes('127.0.0.1') ? 'http' : 'https'
     const siteUrl = `${protocol}://${host}`
+
+    console.log(`[Auth] Using siteUrl: ${siteUrl}`)
 
     // 1. Generate recovery link using Supabase Admin
     // This won't send an email, just gives us the link
@@ -86,7 +91,7 @@ export async function requestPasswordReset(email: string) {
     })
 
     if (!result.success) {
-      return { error: 'Gagal menghantar emel. Sila cuba lagi nanti.' }
+      return { error: `Gagal menghantar emel: ${result.error || 'Ralat tidak dijangka'}. Sila cuba lagi nanti.` }
     }
 
     return { success: true, message: 'Pautan reset telah dihantar ke emel anda. Sila semak peti masuk (inbox) atau folder spam.' }

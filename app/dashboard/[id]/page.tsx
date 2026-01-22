@@ -787,7 +787,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
 
                   {/* SECTION 3: HASIL & LAMPIRAN */}
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between border-b-2 border-zinc-100 dark:border-zinc-800 pb-3">
+                    <div className="flex items-center justify-between border-b-2 border-zinc-100 dark:border-zinc-800 pb-3 text-black">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-neo-primary/10 rounded-lg">
                           <Rocket size={20} className="text-neo-primary" />
@@ -799,7 +799,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                       </div>
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="space-y-6 text-black">
                       <div className="space-y-2">
                         <label className="font-black text-xs uppercase tracking-wide ml-1 flex items-center gap-2 dark:text-white">
                           <CheckCircle2 size={14} className="text-green-500" /> Hasil / Outcome (Hasil Kerja)
@@ -813,7 +813,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-black">
                         <div className="space-y-2">
                           <label className="font-black text-xs uppercase tracking-wide ml-1 text-red-600 dark:text-red-400 flex items-center gap-1.5">
                             <AlertCircle size={14} /> Isu / Halangan
@@ -848,12 +848,12 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t-2 border-zinc-100 dark:border-zinc-800">
-                        <div className="space-y-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t-2 border-zinc-100 dark:border-zinc-800 text-black">
+                        <div className="space-y-2 text-black">
                           <label className="flex items-center gap-2 font-black text-xs uppercase tracking-wide ml-1 dark:text-white">
                             <Paperclip size={14} className="text-zinc-400" /> Upload File
                           </label>
-                          <div className="relative group">
+                          <div className="relative group text-black">
                             <input
                               type="file"
                               className="hidden"
@@ -885,11 +885,11 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                           </div>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-2 text-black">
                           <label className="flex items-center gap-2 font-black text-xs uppercase tracking-wide ml-1 dark:text-white">
                             <Link size={14} className="text-zinc-400" /> Ataupun Letak Link
                           </label>
-                          <div className="relative">
+                          <div className="relative text-black">
                             <input
                               className="w-full bg-white dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 rounded-lg pl-3 pr-3 py-3 font-bold text-sm outline-none focus:shadow-neo-sm transition-all dark:text-white text-black"
                               placeholder="https://..."
@@ -933,7 +933,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                 </div>
 
                 {userRole === 'admin' && (
-                  <div className="relative group w-full sm:w-64">
+                  <div className="relative group w-full sm:w-64 text-black">
                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-black dark:text-white">
                       <Filter size={14} />
                     </div>
@@ -1005,13 +1005,15 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                       <div key={'print-' + report.id} className="border-b border-zinc-200 pb-6 last:border-0 page-break-inside-avoid text-black">
                         <div className="flex justify-between items-start mb-3">
                           <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[9px] font-black uppercase bg-black text-white px-2 py-0.5 rounded">{report.type}</span>
+                            <div className="flex items-center gap-2 mb-1 text-black">
+                              <span className="text-[9px] font-black uppercase bg-black text-white px-2 py-0.5 rounded">
+                                {report.type}
+                              </span>
                               <span className="text-[9px] font-bold text-zinc-400">#{report.id}</span>
                             </div>
-                            <h3 className="text-lg font-black uppercase text-black leading-tight">{report.title}</h3>
+                            <h3 className="text-lg font-black uppercase text-black leading-tight text-black">{report.title}</h3>
                           </div>
-                          <div className="text-right flex flex-col items-end">
+                          <div className="text-right flex flex-col items-end text-black">
                             <span className="text-[10px] font-black text-black">
                               {report.start_date ? new Date(report.start_date).toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date(report.task_date).toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' })}
                             </span>
@@ -1020,13 +1022,13 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                           </div>
                         </div>
 
-                        <div className="space-y-3">
-                          <div>
-                            <h4 className="text-[9px] font-black uppercase text-zinc-400 tracking-widest">Outcome:</h4>
-                            <p className="text-[11px] text-black leading-relaxed whitespace-pre-wrap">{report.outcome}</p>
+                        <div className="space-y-3 text-black">
+                          <div className="text-black">
+                            <h4 className="text-[9px] font-black uppercase text-zinc-400 tracking-widest text-black">Outcome:</h4>
+                            <p className="text-[11px] text-black leading-relaxed whitespace-pre-wrap text-black">{report.outcome}</p>
                           </div>
                           {(report.issues || report.next_action) && (
-                            <div className="grid grid-cols-2 gap-4 bg-zinc-50 p-2 rounded border border-zinc-100">
+                            <div className="grid grid-cols-2 gap-4 bg-zinc-50 p-2 rounded border border-zinc-100 text-black">
                               {report.issues && (
                                 <div>
                                   <h4 className="text-[8px] font-black uppercase text-red-500 tracking-tighter">Isu:</h4>
@@ -1051,11 +1053,11 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                 {notes.some(n => n.type === 'issue') && (
                   <div className="space-y-6 mt-12 page-break-before-always text-black">
                     <h2 className="text-2xl font-black uppercase border-b-4 border-black pb-2 mb-6 text-red-600">BAHAGIAN 2: RUMUSAN ISU & HALANGAN</h2>
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="grid grid-cols-1 gap-4 text-black">
                       {notes.filter(n => n.type === 'issue').map((note) => (
                         <div key={'print-note-' + note.id} className="bg-red-50 border-l-4 border-red-500 p-4 rounded shadow-sm text-black">
                           <p className="text-xs font-black text-red-800 uppercase mb-1">ISU #{note.id}</p>
-                          <p className="text-sm text-red-950 font-medium leading-relaxed">{note.content}</p>
+                          <p className="text-sm text-red-950 font-medium leading-relaxed text-black">{note.content}</p>
                           <p className="text-[9px] text-red-400 mt-2 font-bold uppercase">{new Date(note.created_at).toLocaleDateString('ms-MY', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                         </div>
                       ))}
@@ -1066,8 +1068,8 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                 {/* 3. SECTION: SUGGESTIONS (MANUAL) */}
                 {notes.some(n => n.type === 'suggestion') && (
                   <div className="space-y-6 mt-12 text-black">
-                    <h2 className="text-2xl font-black uppercase border-b-4 border-black pb-2 mb-6 text-green-600">BAHAGIAN 3: CADANGAN & PENAMBAHBAIKAN</h2>
-                    <div className="grid grid-cols-1 gap-4">
+                    <h2 className="text-2xl font-black uppercase border-b-4 border-black pb-2 mb-6 text-green-600 text-black">BAHAGIAN 3: CADANGAN & PENAMBAHBAIKAN</h2>
+                    <div className="grid grid-cols-1 gap-4 text-black">
                       {notes.filter(n => n.type === 'suggestion').map((note) => (
                         <div key={'print-note-' + note.id} className="bg-green-50 border-l-4 border-green-500 p-4 rounded shadow-sm text-black">
                           <p className="text-xs font-black text-green-800 uppercase mb-1">CADANGAN #{note.id}</p>
@@ -1080,12 +1082,12 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                 )}
 
                 <div className="mt-20 pt-8 border-t-2 border-black flex justify-between items-end text-black">
-                  <div className="flex flex-col gap-10">
-                    <div className="w-48 border-b border-black"></div>
-                    <p className="text-[10px] font-black uppercase">Tandatangan Pegawai</p>
+                  <div className="flex flex-col gap-10 text-black">
+                    <div className="w-48 border-b border-black text-black"></div>
+                    <p className="text-[10px] font-black uppercase text-black">Tandatangan Pegawai</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[9px] font-medium text-zinc-300 italic">Vibrant Staff System — Auto Generated Report</p>
+                  <div className="text-right text-black">
+                    <p className="text-[9px] font-medium text-zinc-300 italic text-black">Vibrant Staff System — Auto Generated Report</p>
                   </div>
                 </div>
               </div>
@@ -1095,11 +1097,11 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                 {filteredReports.length === 0 ? (
                   <div className="bg-zinc-100 dark:bg-zinc-900 border-4 border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl py-20 text-center flex flex-col items-center justify-center opacity-70">
                     <ClipboardList size={64} className="mb-4 text-zinc-400 dark:text-zinc-600" />
-                    <p className="font-black text-xl text-zinc-400 dark:text-zinc-500 uppercase tracking-widest text-black">Tiada rekod dijumpai.</p>
-                    <p className="font-bold text-sm text-zinc-400 dark:text-zinc-600 mt-2">Sila pilih kategori lain atau tambah rekod baru.</p>
+                    <p className="font-black text-xl text-zinc-400 dark:text-zinc-500 uppercase tracking-widest text-black text-black">Tiada rekod dijumpai.</p>
+                    <p className="font-bold text-sm text-zinc-400 dark:text-zinc-600 mt-2 text-black text-black">Sila pilih kategori lain atau tambah rekod baru.</p>
                   </div>
                 ) : viewMode === 'list' ? (
-                  <div className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.5)]">
+                  <div className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[255,255,255,0.5] text-black">
                     {filteredReports.map((report, index) => (
                       <div
                         key={report.id}
@@ -1108,7 +1110,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                       >
                         {/* 1. Avatar (Desktop Only) */}
                         <div className="hidden sm:flex shrink-0 mt-1 text-black">
-                          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-black bg-zinc-100 overflow-hidden flex items-center justify-center shadow-neo-sm">
+                          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-black bg-zinc-100 overflow-hidden flex items-center justify-center shadow-neo-sm text-black">
                             {(Array.isArray(report.profiles) ? report.profiles[0]?.avatar_url : report.profiles?.avatar_url) ? (
                               <img src={Array.isArray(report.profiles) ? report.profiles[0].avatar_url : report.profiles?.avatar_url} alt="Staff" className="w-full h-full object-cover" />
                             ) : (
@@ -1122,7 +1124,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                           <span className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 text-black">
                             #{report.id}
                           </span>
-                          <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider leading-none text-black">
+                          <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider leading-none text-black text-black">
                             {report.start_date ? new Date(report.start_date).toLocaleDateString('default', { day: '2-digit', month: 'short' }) : report.task_date ? new Date(report.task_date).toLocaleDateString('default', { day: '2-digit', month: 'short' }) : '--'}
                           </span>
                         </div>
@@ -1149,7 +1151,9 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                             </span>
                             {/* Icons only for verified/attachment to save space */}
                             {findApprovedRequest(report.user_id, report.task_date || report.start_date, report.working_location) && (
-                              <ShieldCheck size={10} className="text-green-500 animate-pulse" />
+                              <span className="flex items-center gap-1 text-[7px] font-black uppercase bg-green-500 text-white px-2 py-0.5 rounded-full border border-black/10 animate-pulse shadow-neo-sm text-black text-black">
+                                <ShieldCheck size={10} /> VERIFIED
+                              </span>
                             )}
                             {report.attachment_url && <Paperclip size={10} className="text-neo-primary" />}
                           </div>
@@ -1162,7 +1166,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                         {/* Actions & Mobile Metadata */}
                         <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto shrink-0 mt-2 sm:mt-0 pt-2 sm:pt-0 border-t border-zinc-100 dark:border-zinc-800 sm:border-0 text-black">
                           {/* Mobile Only: Avatar + Date + ID */}
-                          <div className="sm:hidden flex items-center gap-2">
+                          <div className="sm:hidden flex items-center gap-2 text-black">
                             <div className="w-5 h-5 rounded-full border border-black bg-zinc-100 overflow-hidden shrink-0">
                               {(Array.isArray(report.profiles) ? report.profiles[0]?.avatar_url : report.profiles?.avatar_url) ? (
                                 <img src={Array.isArray(report.profiles) ? report.profiles[0].avatar_url : report.profiles?.avatar_url} alt="Staff" className="w-full h-full object-cover" />
@@ -1177,11 +1181,11 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                             </div>
                           </div>
 
-                          <div className="flex gap-1.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                          <div className="flex gap-1.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-black">
                             {(userRole === 'admin' || report.user_id === userId) && (
                               <>
-                                <button onClick={(e) => { e.stopPropagation(); handleEditReport(report); }} className="p-1 px-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 sm:border-0" title="Edit"><Edit3 size={12} /></button>
-                                <button onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id); }} className="p-1 px-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-300 hover:text-red-500 border border-zinc-200 dark:border-zinc-700 sm:border-0" title="Padam"><Trash2 size={12} /></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleEditReport(report); }} className="p-1 px-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 sm:border-0 text-black" title="Edit"><Edit3 size={12} /></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id); }} className="p-1 px-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-300 hover:text-red-500 border border-zinc-200 dark:border-zinc-700 sm:border-0 text-black text-black" title="Padam"><Trash2 size={12} /></button>
                               </>
                             )}
                           </div>
@@ -1197,7 +1201,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                       return (
                         <div key={status} className="flex-1 min-w-[300px] flex flex-col gap-4 text-black">
                           {/* Column Header */}
-                          <div className="flex items-center justify-between bg-white dark:bg-zinc-900 border-2 border-black dark:border-white p-3 rounded-lg shadow-neo-sm">
+                          <div className="flex items-center justify-between bg-white dark:bg-zinc-900 border-2 border-black dark:border-white p-3 rounded-lg shadow-neo-sm text-black text-black text-black">
                             <div className="flex items-center gap-2">
                               <span className={`w-3 h-3 rounded-full border border-black ${status === 'Done' ? 'bg-green-400' : status === 'Blocked' ? 'bg-red-400' : 'bg-yellow-400'}`}></span>
                               <h4 className="font-black text-xs uppercase tracking-widest dark:text-white text-black">{status}</h4>
@@ -1211,7 +1215,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                               <div
                                 key={report.id}
                                 onClick={() => setSelectedReport(report)}
-                                className="bg-white dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 p-4 rounded-xl shadow-neo-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all cursor-pointer group relative overflow-hidden text-black"
+                                className="bg-white dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 p-4 rounded-xl shadow-neo-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all cursor-pointer group relative overflow-hidden text-black text-black"
                               >
                                 {/* Type Tag Overlay */}
                                 <div className={`absolute top-0 right-0 px-2 py-0.5 text-[8px] font-black uppercase border-b-2 border-l-2 border-black flex items-center gap-1 ${report.type === 'task' ? 'bg-orange-400 text-black' : 'bg-blue-400 text-black'}`}>
@@ -1219,16 +1223,16 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                                 </div>
 
                                 <div className="flex items-start gap-3 mb-3 text-black">
-                                  <div className="w-8 h-8 rounded-full border-2 border-black overflow-hidden shrink-0 shadow-neo-sm text-black">
+                                  <div className="w-8 h-8 rounded-full border-2 border-black overflow-hidden shrink-0 shadow-neo-sm text-black text-black">
                                     {(Array.isArray(report.profiles) ? report.profiles[0]?.avatar_url : report.profiles?.avatar_url) ? (
-                                      <img src={Array.isArray(report.profiles) ? report.profiles[0]?.avatar_url : report.profiles?.avatar_url} alt="Staff" className="w-full h-full object-cover" />
+                                      <img src={Array.isArray(report.profiles) ? report.profiles[0].avatar_url : report.profiles?.avatar_url} alt="Staff" className="w-full h-full object-cover text-black text-black" />
                                     ) : (
-                                      <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-black"><User size={14} className="text-zinc-400 text-black" /></div>
+                                      <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-black text-black"><User size={14} className="text-zinc-400" /></div>
                                     )}
                                   </div>
-                                  <div className="min-w-0 flex-grow text-black">
+                                  <div className="min-w-0 flex-grow text-black text-black">
                                     <h5 className="font-black text-xs uppercase dark:text-white leading-tight break-words pr-6 text-black">{report.title}</h5>
-                                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-black">
                                       <span className="flex items-center gap-1 text-[8px] font-bold text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
                                         <MapPin size={8} className="text-neo-primary" /> {report.working_location || 'Office'}
                                       </span>
@@ -1284,141 +1288,149 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
               </div>
 
               {/* SUMMARY SECTION (ISSUES & SUGGESTIONS) - HIDDEN ON PRINT */}
-              <div className="mt-8 print:hidden text-black">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 pb-2 border-b-2 border-black dark:border-white">
-                  <div className="flex items-center gap-3">
-                    <span className="bg-neo-primary text-white p-1.5 border border-black shadow-neo-sm">
-                      <AlertCircle size={16} />
-                    </span>
-                    <h2 className="text-xl font-black uppercase italic tracking-tighter dark:text-white text-black">Rumusan Isu & Cadangan</h2>
-                  </div>
-                  <button
-                    onClick={() => openNoteModal()}
-                    className="bg-black hover:bg-zinc-800 text-white dark:bg-white dark:text-black text-[10px] font-black uppercase px-4 py-2 rounded-lg shadow-neo-sm hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all flex items-center gap-2"
-                  >
-                    <PlusCircle size={14} /> Tambah Manual
-                  </button>
-                </div>
-
-                {(!notes.length && !reports.some(r => r.issues || r.next_action)) && (
-                  <p className="text-zinc-400 dark:text-zinc-600 font-bold text-center py-8 italic">Tiada isu atau cadangan dilaporkan setakat ini.</p>
-                )}
-
-                <div className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[255,255,255,0.5] text-black">
-                  {/* ISSUES SUBSECTION */}
-                  <div className="border-b-4 border-black bg-red-50/30 p-3">
-                    <h3 className="font-black text-xs uppercase tracking-widest text-red-600 flex items-center gap-2">
-                      <AlertCircle size={14} /> Bahagian 1: Isu & Masalah
-                    </h3>
-                  </div>
-                  
-                  {/* 1. Mapped Report Issues */}
-                  {reports.filter(r => r.issues).map((report) => (
-                      <div key={'summary-issue-' + report.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-200 dark:border-zinc-700 last:border-b-0 text-black">
-                        <div className="w-full sm:w-auto min-w-[80px] sm:text-right shrink-0">
-                          <div className="text-xs font-black text-zinc-400 uppercase tracking-wider">#{report.id}</div>
-                        </div>
-                        <div className="flex-grow min-w-0">
-                          <h4 className="font-black text-xs uppercase text-zinc-500 mb-1">Berkenaan: {report.title}</h4>
-                          <p className="text-sm font-medium text-red-700 leading-relaxed italic">{report.issues}</p>
-                        </div>
-                      </div>
-                  ))}
-                  {/* 2. Manual Issues */}
-                  {notes.filter(n => n.type === 'issue').map((note) => (
-                    <div key={'note-issue-' + note.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-200 dark:border-zinc-700 last:border-b-0 text-black">
-                      <div className="w-full sm:w-auto min-w-[80px] sm:text-right shrink-0">
-                        <div className="text-xs font-black text-zinc-400 uppercase tracking-wider">MANUAL</div>
-                      </div>
-                      <div className="flex-grow min-w-0 text-black">
-                        <p className="text-sm font-medium text-red-700 leading-relaxed italic">{note.content}</p>
-                      </div>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => openNoteModal(note)} className="p-1.5 hover:bg-zinc-200 rounded text-zinc-500"><Edit3 size={14} /></button>
-                        <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 hover:bg-red-100 rounded text-red-400"><Trash2 size={14} /></button>
-                      </div>
+              {(notes.length > 0 || reports.some(r => r.issues || r.next_action)) && (
+                <div className="mt-8 print:hidden text-black">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 pb-2 border-b-2 border-black dark:border-white">
+                    <div className="flex items-center gap-3">
+                      <span className="bg-neo-primary text-white p-1.5 border border-black shadow-neo-sm">
+                        <AlertCircle size={16} />
+                      </span>
+                      <h2 className="text-xl font-black uppercase italic tracking-tighter dark:text-white text-black">Rumusan Isu & Cadangan</h2>
                     </div>
-                  ))}
-
-                  {/* SUGGESTIONS SUBSECTION */}
-                  <div className="border-y-4 border-black bg-green-50/30 p-3 mt-4 text-black">
-                    <h3 className="font-black text-xs uppercase tracking-widest text-green-600 flex items-center gap-2">
-                      <Rocket size={14} /> Bahagian 2: Cadangan & Penambahbaikan
-                    </h3>
+                    <button
+                      onClick={() => openNoteModal()}
+                      className="bg-black hover:bg-zinc-800 text-white dark:bg-white dark:text-black text-[10px] font-black uppercase px-4 py-2 rounded-lg shadow-neo-sm hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all flex items-center gap-2"
+                    >
+                      <PlusCircle size={14} /> Tambah Manual
+                    </button>
                   </div>
 
-                  {/* 1. Mapped Report Suggestions */}
-                  {reports.filter(r => r.next_action).map((report) => (
-                      <div key={'summary-suggest-' + report.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-200 dark:border-zinc-700 last:border-b-0 text-black">
-                        <div className="w-full sm:w-auto min-w-[80px] sm:text-right shrink-0">
-                          <div className="text-xs font-black text-zinc-400 uppercase tracking-wider">#{report.id}</div>
+                  <div className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[255,255,255,0.5] text-black">
+                    {/* ISSUES SUBSECTION */}
+                    {(notes.some(n => n.type === 'issue') || reports.some(r => r.issues)) && (
+                      <>
+                        <div className="border-b-4 border-black bg-red-50/30 p-3">
+                          <h3 className="font-black text-xs uppercase tracking-widest text-red-600 flex items-center gap-2">
+                            <AlertCircle size={14} /> Bahagian 1: Isu & Masalah
+                          </h3>
                         </div>
-                        <div className="flex-grow min-w-0">
-                          <h4 className="font-black text-xs uppercase text-zinc-500 mb-1 text-black">Plan: {report.title}</h4>
-                          <p className="text-sm font-medium text-green-700 leading-relaxed">{report.next_action}</p>
+                        
+                        {/* 1. Mapped Report Issues */}
+                        {reports.filter(r => r.issues).map((report) => (
+                            <div key={'summary-issue-' + report.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-200 dark:border-zinc-700 last:border-b-0 text-black text-black">
+                              <div className="w-full sm:w-auto min-w-[80px] sm:text-right shrink-0">
+                                <div className="text-xs font-black text-zinc-400 uppercase tracking-wider text-black">#{report.id}</div>
+                              </div>
+                              <div className="flex-grow min-w-0 text-black">
+                                <h4 className="font-black text-xs uppercase text-zinc-500 mb-1 text-black">Berkenaan: {report.title}</h4>
+                                <p className="text-sm font-medium text-red-700 leading-relaxed italic text-black">{report.issues}</p>
+                              </div>
+                            </div>
+                        ))}
+                        {/* 2. Manual Issues */}
+                        {notes.filter(n => n.type === 'issue').map((note) => (
+                          <div key={'note-issue-' + note.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-200 dark:border-zinc-700 last:border-b-0 text-black text-black">
+                            <div className="w-full sm:w-auto min-w-[80px] sm:text-right shrink-0 text-black">
+                              <div className="text-xs font-black text-zinc-400 uppercase tracking-wider text-black">MANUAL</div>
+                            </div>
+                            <div className="flex-grow min-w-0 text-black">
+                              <p className="text-sm font-medium text-red-700 leading-relaxed italic text-black">{note.content}</p>
+                            </div>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity text-black text-black">
+                              <button onClick={() => openNoteModal(note)} className="p-1.5 hover:bg-zinc-200 rounded text-zinc-500"><Edit3 size={14} /></button>
+                              <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 hover:bg-red-100 rounded text-red-400"><Trash2 size={14} /></button>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {/* SUGGESTIONS SUBSECTION */}
+                    {(notes.some(n => n.type === 'suggestion') || reports.some(r => r.next_action)) && (
+                      <>
+                        <div className="border-y-4 border-black bg-green-50/30 p-3 text-black">
+                          <h3 className="font-black text-xs uppercase tracking-widest text-green-600 flex items-center gap-2">
+                            <Rocket size={14} /> Bahagian 2: Cadangan & Penambahbaikan
+                          </h3>
                         </div>
-                      </div>
-                  ))}
-                  {/* 2. Manual Suggestions */}
-                  {notes.filter(n => n.type === 'suggestion').map((note) => (
-                    <div key={'note-suggest-' + note.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-200 dark:border-zinc-700 last:border-b-0 text-black">
-                      <div className="w-full sm:w-auto min-w-[80px] sm:text-right shrink-0">
-                        <div className="text-xs font-black text-zinc-400 uppercase tracking-wider">MANUAL</div>
-                      </div>
-                      <div className="flex-grow min-w-0">
-                        <p className="text-sm font-medium text-green-700 leading-relaxed">{note.content}</p>
-                      </div>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => openNoteModal(note)} className="p-1.5 hover:bg-zinc-200 rounded text-zinc-500"><Edit3 size={14} /></button>
-                        <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 hover:bg-red-100 rounded text-red-400"><Trash2 size={14} /></button>
-                      </div>
-                    </div>
-                  ))}
+
+                        {/* 1. Mapped Report Suggestions */}
+                        {reports.filter(r => r.next_action).map((report) => (
+                            <div key={'summary-suggest-' + report.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-200 dark:border-zinc-700 last:border-b-0 text-black text-black">
+                              <div className="w-full sm:w-auto min-w-[80px] sm:text-right shrink-0 text-black">
+                                <div className="text-xs font-black text-zinc-400 uppercase tracking-wider text-black text-black">#{report.id}</div>
+                              </div>
+                              <div className="flex-grow min-w-0 text-black">
+                                <h4 className="font-black text-xs uppercase text-zinc-500 mb-1 text-black text-black">Plan: {report.title}</h4>
+                                <p className="text-sm font-medium text-green-700 leading-relaxed text-black text-black">{report.next_action}</p>
+                              </div>
+                            </div>
+                        ))}
+                        {/* 2. Manual Suggestions */}
+                        {notes.filter(n => n.type === 'suggestion').map((note) => (
+                          <div key={'note-suggest-' + note.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-200 dark:border-zinc-700 last:border-b-0 text-black text-black text-black">
+                            <div className="w-full sm:w-auto min-w-[80px] sm:text-right shrink-0 text-black">
+                              <div className="text-xs font-black text-zinc-400 uppercase tracking-wider text-black text-black">MANUAL</div>
+                            </div>
+                            <div className="flex-grow min-w-0 text-black">
+                              <p className="text-sm font-medium text-green-700 leading-relaxed text-black text-black">{note.content}</p>
+                            </div>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity text-black text-black">
+                              <button onClick={() => openNoteModal(note)} className="p-1.5 hover:bg-zinc-200 rounded text-zinc-500"><Edit3 size={14} /></button>
+                              <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 hover:bg-red-100 rounded text-red-400"><Trash2 size={14} /></button>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* DETAILED REPORT MODAL */}
               {selectedReport && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
-                  <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl border-4 border-black dark:border-white rounded-2xl shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] dark:shadow-[12px_12px_0px_0px_rgba(255,255,255,0.4)] overflow-hidden animate-in zoom-in-95 duration-300">
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300 text-black">
+                  <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl border-4 border-black dark:border-white rounded-2xl shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] dark:shadow-[255,255,255,0.4] overflow-hidden animate-in zoom-in-95 duration-300 text-black">
                     {/* Modal Header */}
-                    <div className={`p-6 border-b-4 border-black dark:border-white flex justify-between items-start gap-4 ${selectedReport.status === 'Done' ? 'bg-green-400' : selectedReport.status === 'Blocked' ? 'bg-red-400' : 'bg-yellow-400'}`}>
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="bg-black text-white px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">{selectedReport.type}</span>
-                          <span className="bg-white/50 text-black px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border border-black/10">ID: #{selectedReport.id}</span>
+                    <div className={`p-6 border-b-4 border-black dark:border-white flex justify-between items-start gap-4 text-black ${selectedReport.status === 'Done' ? 'bg-green-400' : selectedReport.status === 'Blocked' ? 'bg-red-400' : 'bg-yellow-400'}`}>
+                      <div className="text-black">
+                        <div className="flex items-center gap-2 mb-2 text-black">
+                          <span className="bg-black text-white px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest text-black">
+                            {selectedReport.type}
+                          </span>
+                          <span className="bg-white/50 text-black px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border border-black/10 text-black">ID: #{selectedReport.id}</span>
                         </div>
-                        <h3 className="text-3xl font-black uppercase italic leading-none tracking-tighter text-black">{selectedReport.title}</h3>
+                        <h3 className="text-3xl font-black uppercase italic leading-none tracking-tighter text-black text-black">{selectedReport.title}</h3>
                       </div>
                       <button onClick={() => setSelectedReport(null)} className="bg-black text-white p-2 rounded-lg hover:scale-110 active:scale-90 transition-transform"><X size={24} /></button>
                     </div>
 
                     {/* Modal Body */}
-                    <div className="p-6 md:p-8 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar dark:text-white">
+                    <div className="p-6 md:p-8 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar dark:text-white text-black">
                       {/* Meta Info */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-black">
-                        <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl border-2 border-black/5 dark:border-white/5">
+                        <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl border-2 border-black/5 dark:border-white/5 text-black">
                           <p className="text-[10px] font-black text-zinc-400 uppercase mb-1">Disediakan Oleh</p>
-                          <div className="flex items-center gap-2 text-black">
-                            <div className="w-6 h-6 rounded-full overflow-hidden border border-black">
-                              {(Array.isArray(selectedReport.profiles) ? selectedReport.profiles[0]?.avatar_url : selectedReport.profiles?.avatar_url) ? <img src={Array.isArray(selectedReport.profiles) ? selectedReport.profiles[0].avatar_url : selectedReport.profiles?.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-zinc-200 flex items-center justify-center text-black"><User size={12} /></div>}
+                          <div className="flex items-center gap-2 text-black text-black">
+                            <div className="w-6 h-6 rounded-full overflow-hidden border border-black text-black">
+                              {(Array.isArray(selectedReport.profiles) ? selectedReport.profiles[0]?.avatar_url : selectedReport.profiles?.avatar_url) ? <img src={Array.isArray(selectedReport.profiles) ? selectedReport.profiles[0].avatar_url : selectedReport.profiles?.avatar_url} className="w-full h-full object-cover text-black" /> : <div className="w-full h-full bg-zinc-200 flex items-center justify-center text-black text-black"><User size={12} /></div>}
                             </div>
                             <span className="text-xs font-bold text-black">{Array.isArray(selectedReport.profiles) ? selectedReport.profiles[0]?.full_name : selectedReport.profiles?.full_name}</span>
                           </div>
                         </div>
-                        <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl border-2 border-black/5 dark:border-white/5">
+                        <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl border-2 border-black/5 dark:border-white/5 text-black">
                           <p className="text-[10px] font-black text-zinc-400 uppercase mb-1">Status Semasa</p>
                           <span className="text-xs font-black uppercase text-black">{selectedReport.status}</span>
                         </div>
-                        <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl border-2 border-black/5 dark:border-white/5 text-black">
-                          <p className="text-[10px] font-black text-zinc-400 uppercase mb-1">Tarikh Mula</p>
-                          <span className="text-xs font-black text-black">{selectedReport.start_date || selectedReport.task_date || '--'}</span>
+                        <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl border-2 border-black/5 dark:border-white/5 text-black text-black">
+                          <p className="text-[10px] font-black text-zinc-400 uppercase mb-1 text-black">Tarikh Mula</p>
+                          <span className="text-xs font-black text-black text-black">{selectedReport.start_date || selectedReport.task_date || '--'}</span>
                         </div>
-                        <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl border-2 border-black/5 dark:border-white/5 text-black">
+                        <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl border-2 border-black/5 dark:border-white/5 text-black text-black text-black">
                           <p className="text-[10px] font-black text-zinc-400 uppercase mb-1 text-black">Sasaran Siap</p>
-                          <span className="text-xs font-black text-black">{selectedReport.end_date || '--'}</span>
+                          <span className="text-xs font-black text-black text-black">{selectedReport.end_date || '--'}</span>
                         </div>
-                        <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl border-2 border-black/5 dark:border-white/5 text-black">
+                        <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl border-2 border-black/5 dark:border-white/5 text-black text-black text-black">
                           <p className="text-[10px] font-black text-zinc-400 uppercase mb-1">Lokasi</p>
                           <div className="flex items-center gap-1 text-xs font-black text-black">
                             <MapPin size={12} className="text-neo-primary text-black" />
@@ -1428,29 +1440,29 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                       </div>
 
                       {/* Main Content Sections */}
-                      <div className="space-y-6 text-black">
-                        <div className="relative p-6 bg-blue-50/50 dark:bg-blue-900/10 border-2 border-blue-100 dark:border-blue-900/30 rounded-2xl">
-                          <div className="absolute -top-3 left-4 bg-blue-500 text-white px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">Hasil / Outcome</div>
+                      <div className="space-y-6 text-black text-black">
+                        <div className="relative p-6 bg-blue-50/50 dark:bg-blue-900/10 border-2 border-blue-100 dark:border-blue-900/30 rounded-2xl text-black">
+                          <div className="absolute -top-3 left-4 bg-blue-500 text-white px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm text-black">Hasil / Outcome</div>
                           <p className="text-sm font-medium leading-relaxed whitespace-pre-wrap text-black">{selectedReport.outcome}</p>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-black">
-                          <div className="relative p-6 bg-red-50/50 dark:bg-red-900/10 border-2 border-red-100 dark:border-red-900/30 rounded-2xl">
-                            <div className="absolute -top-3 left-4 bg-red-500 text-white px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">Isu / Halangan</div>
-                            <p className="text-sm font-medium italic text-red-900 dark:text-red-200">{selectedReport.issues || 'Tiada isu dilaporkan.'}</p>
+                          <div className="relative p-6 bg-red-50/50 dark:bg-red-900/10 border-2 border-red-100 dark:border-red-900/30 rounded-2xl text-black">
+                            <div className="absolute -top-3 left-4 bg-red-500 text-white px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm text-black">Isu / Halangan</div>
+                            <p className="text-sm font-medium italic text-red-900 dark:text-red-200 text-black">{selectedReport.issues || 'Tiada isu dilaporkan.'}</p>
                           </div>
-                          <div className="relative p-6 bg-green-50/50 dark:bg-green-900/10 border-2 border-green-100 dark:border-green-900/30 rounded-2xl">
-                            <div className="absolute -top-3 left-4 bg-green-600 text-white px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">Pelan Seterusnya</div>
+                          <div className="relative p-6 bg-green-50/50 dark:bg-green-900/10 border-2 border-green-100 dark:border-green-900/30 rounded-2xl text-black">
+                            <div className="absolute -top-3 left-4 bg-green-600 text-white px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm text-black">Pelan Seterusnya</div>
                             <p className="text-sm font-medium text-green-900 dark:text-green-200 text-black">{selectedReport.next_action || 'Tiada pelan tindakan lanjut.'}</p>
                           </div>
                         </div>
 
                         {selectedReport.attachment_url && (
-                          <div className="relative p-6 bg-zinc-50 dark:bg-zinc-800 border-4 border-black dark:border-white rounded-2xl shadow-neo-sm">
-                            <div className="absolute -top-3 left-4 bg-black text-white dark:bg-white dark:text-black px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest">Lampiran Fail / Pautan</div>
-                            <div className="flex items-center justify-between gap-4 text-black">
-                              <div className="flex items-center gap-3">
-                                <div className="p-3 bg-neo-yellow border-2 border-black rounded-xl">
+                          <div className="relative p-6 bg-zinc-50 dark:bg-zinc-800 border-4 border-black dark:border-white rounded-2xl shadow-neo-sm text-black">
+                            <div className="absolute -top-3 left-4 bg-black text-white dark:bg-white dark:text-black px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest text-black">Lampiran Fail / Pautan</div>
+                            <div className="flex items-center justify-between gap-4 text-black text-black">
+                              <div className="flex items-center gap-3 text-black">
+                                <div className="p-3 bg-neo-yellow border-2 border-black rounded-xl text-black">
                                   {selectedReport.attachment_name === 'Link' ? <Link size={20} /> : <FileText size={20} />}
                                 </div>
                                 <div className="min-w-0 text-black">
@@ -1462,7 +1474,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                                 href={selectedReport.attachment_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="bg-black text-white dark:bg-white dark:text-black px-5 py-2 rounded-lg font-black text-xs uppercase flex items-center gap-2 hover:translate-x-1 transition-transform"
+                                className="bg-black text-white dark:bg-white dark:text-black px-5 py-2 rounded-lg font-black text-xs uppercase flex items-center gap-2 hover:translate-x-1 transition-transform text-black"
                               >
                                 Buka <ExternalLink size={14} />
                               </a>
@@ -1478,36 +1490,36 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                           <h4 className="font-black text-sm uppercase tracking-wider dark:text-white text-black">Perbincangan / Komen</h4>
                         </div>
 
-                        <div className="space-y-4 mb-6 text-black">
+                        <div className="space-y-4 mb-6 text-black text-black text-black">
                           {comments.length === 0 ? (
-                            <p className="text-xs text-zinc-400 dark:text-zinc-600 italic py-4 text-center">Tiada komen buat masa ini.</p>
+                            <p className="text-xs text-zinc-400 dark:text-zinc-600 italic py-4 text-center text-black text-black">Tiada komen buat masa ini.</p>
                           ) : (
                             comments.map((comment) => (
                               <div key={comment.id} className="flex gap-3 text-black">
-                                <div className="w-8 h-8 rounded-full border border-black overflow-hidden shrink-0">
+                                <div className="w-8 h-8 rounded-full border border-black overflow-hidden shrink-0 text-black">
                                   {comment.profiles?.avatar_url ? (
-                                    <img src={comment.profiles.avatar_url} className="w-full h-full object-cover" />
+                                    <img src={comment.profiles.avatar_url} className="w-full h-full object-cover text-black" />
                                   ) : (
-                                    <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-black"><User size={14} className="text-zinc-400" /></div>
+                                    <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-black text-black"><User size={14} className="text-zinc-400" /></div>
                                   )}
                                 </div>
                                 <div className="flex-grow text-black">
                                   <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl border border-zinc-100 dark:border-zinc-700 text-black">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-[10px] font-black uppercase dark:text-white text-black">
+                                    <div className="flex items-center gap-2 text-black">
+                                      <span className="text-[10px] font-black uppercase dark:text-white text-black text-black">
                                         {comment.profiles && !Array.isArray(comment.profiles) ? comment.profiles.full_name : 'Staff'}
                                       </span>
                                       {userRole === 'admin' && (
                                         <button
                                           onClick={() => handleDeleteComment(comment.id)}
-                                          className="text-red-400 hover:text-red-500 transition-colors p-0.5"
+                                          className="text-red-400 hover:text-red-500 transition-colors p-0.5 text-black"
                                           title="Padam Komen"
                                         >
                                           <Trash2 size={10} />
                                         </button>
                                       )}
                                     </div>
-                                    <span className="text-[8px] font-medium text-zinc-400">{new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <span className="text-[8px] font-medium text-zinc-400 text-black">{new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                   </div>
                                   <p className="text-xs text-zinc-600 dark:text-zinc-300 text-black">{comment.comment}</p>
                                 </div>
@@ -1522,12 +1534,12 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                             value={newComment}
                             onChange={(e) => setNewComment(e.target.value)}
                             placeholder="Tulis komen atau beri maklum balas..."
-                            className="w-full bg-white dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 rounded-xl p-3 pr-12 text-xs font-medium outline-none focus:shadow-neo-sm transition-all dark:text-white text-black"
+                            className="w-full bg-white dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 rounded-xl p-3 pr-12 text-xs font-medium outline-none focus:shadow-neo-sm transition-all dark:text-white text-black text-black"
                           />
                           <button
                             type="submit"
                             disabled={!newComment.trim()}
-                            className="absolute right-2 top-1.5 p-1.5 bg-neo-primary text-white rounded-lg border border-black disabled:opacity-50 transition-opacity text-black"
+                            className="absolute right-2 top-1.5 p-1.5 bg-neo-primary text-white rounded-lg border border-black disabled:opacity-50 transition-opacity text-black text-black"
                           >
                             <Send size={16} />
                           </button>
@@ -1536,7 +1548,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                     </div>
 
                     {/* Modal Footer */}
-                    <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 border-t-4 border-black dark:border-white flex justify-end gap-3 text-black">
+                    <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 border-t-4 border-black dark:border-white flex justify-end gap-3 text-black text-black">
                       {(userRole === 'admin' || selectedReport.user_id === userId) && (
                         <>
                           <button
@@ -1547,7 +1559,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                           </button>
                           <button
                             onClick={() => { if (confirm('Padam?')) { handleDeleteReport(selectedReport.id); setSelectedReport(null); } }}
-                            className="px-6 py-2.5 bg-red-500 text-white border-2 border-black rounded-lg font-black text-xs uppercase shadow-neo-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all text-black"
+                            className="px-6 py-2.5 bg-red-500 text-white border-2 border-black rounded-lg font-black text-xs uppercase shadow-neo-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all text-black text-black"
                           >
                             Padam
                           </button>
@@ -1560,39 +1572,39 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
 
               {/* NOTE MODAL */}
               {showNoteModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                  <div className="bg-white dark:bg-zinc-900 w-full max-w-md border-4 border-black dark:border-white rounded-xl shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.5)] animate-in zoom-in-95 overflow-hidden text-black">
-                    <div className="flex justify-between items-center p-4 border-b-4 border-black dark:border-white bg-neo-yellow">
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 text-black">
+                  <div className="bg-white dark:bg-zinc-900 w-full max-w-md border-4 border-black dark:border-white rounded-xl shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.5)] animate-in zoom-in-95 overflow-hidden text-black text-black">
+                    <div className="flex justify-between items-center p-4 border-b-4 border-black dark:border-white bg-neo-yellow text-black text-black">
                       <h3 className="text-xl font-black uppercase italic tracking-tighter text-black">{editingNote ? 'Kemaskini Nota' : 'Tambah Manual'}</h3>
                       <button onClick={() => setShowNoteModal(false)} className="bg-black/10 hover:bg-black hover:text-white p-1 rounded transition-colors"><X size={18} /></button>
                     </div>
-                    <form onSubmit={handleSaveNote} className="p-6 space-y-4 text-black">
-                      <div className="space-y-2">
-                        <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white text-black">Jenis Nota</label>
-                        <div className="flex gap-4">
-                          <label className="flex items-center gap-2 cursor-pointer bg-zinc-50 dark:bg-zinc-800 p-3 rounded-lg border-2 border-transparent has-[:checked]:border-black dark:has-[:checked]:border-white has-[:checked]:bg-red-50 dark:has-[:checked]:bg-red-900/20 flex-1 transition-all text-black">
-                            <input type="radio" name="noteType" value="issue" checked={noteForm.type === 'issue'} onChange={() => setNoteForm({ ...noteForm, type: 'issue' })} className="accent-red-500 w-4 h-4 text-black" />
-                            <span className="font-bold text-xs uppercase dark:text-white text-black">Isu / Masalah</span>
+                    <form onSubmit={handleSaveNote} className="p-6 space-y-4 text-black text-black">
+                      <div className="space-y-2 text-black text-black">
+                        <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white text-black text-black">Jenis Nota</label>
+                        <div className="flex gap-4 text-black text-black">
+                          <label className="flex items-center gap-2 cursor-pointer bg-zinc-50 dark:bg-zinc-800 p-3 rounded-lg border-2 border-transparent has-[:checked]:border-black dark:has-[:checked]:border-white has-[:checked]:bg-red-50 dark:has-[:checked]:bg-red-900/20 flex-1 transition-all text-black text-black">
+                            <input type="radio" name="noteType" value="issue" checked={noteForm.type === 'issue'} onChange={() => setNoteForm({ ...noteForm, type: 'issue' })} className="accent-red-500 w-4 h-4 text-black text-black" />
+                            <span className="font-bold text-xs uppercase dark:text-white text-black text-black">Isu / Masalah</span>
                           </label>
-                          <label className="flex items-center gap-2 cursor-pointer bg-zinc-50 dark:bg-zinc-800 p-3 rounded-lg border-2 border-transparent has-[:checked]:border-black dark:has-[:checked]:border-white has-[:checked]:bg-green-50 dark:has-[:checked]:bg-green-900/20 flex-1 transition-all text-black">
-                            <input type="radio" name="noteType" value="suggestion" checked={noteForm.type === 'suggestion'} onChange={() => setNoteForm({ ...noteForm, type: 'suggestion' })} className="accent-green-500 w-4 h-4 text-black" />
-                            <span className="font-bold text-xs uppercase dark:text-white text-black">Cadangan</span>
+                          <label className="flex items-center gap-2 cursor-pointer bg-zinc-50 dark:bg-zinc-800 p-3 rounded-lg border-2 border-transparent has-[:checked]:border-black dark:has-[:checked]:border-white has-[:checked]:bg-green-50 dark:has-[:checked]:bg-green-900/20 flex-1 transition-all text-black text-black text-black">
+                            <input type="radio" name="noteType" value="suggestion" checked={noteForm.type === 'suggestion'} onChange={() => setNoteForm({ ...noteForm, type: 'suggestion' })} className="accent-green-500 w-4 h-4 text-black text-black" />
+                            <span className="font-bold text-xs uppercase dark:text-white text-black text-black">Cadangan</span>
                           </label>
                         </div>
                       </div>
-                      <div className="space-y-2 text-black">
-                        <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white text-black">Butiran</label>
+                      <div className="space-y-2 text-black text-black">
+                        <label className="block font-black text-xs uppercase tracking-wide ml-1 dark:text-white text-black text-black">Butiran</label>
                         <textarea
                           required
                           autoFocus
-                          className="w-full bg-white dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 rounded-lg p-3 font-bold text-sm outline-none h-32 resize-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.5)] focus:-translate-y-1 transition-all dark:text-white text-black"
+                          className="w-full bg-white dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 rounded-lg p-3 font-bold text-sm outline-none h-32 resize-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[255,255,255,0.5] focus:-translate-y-1 transition-all dark:text-white text-black text-black"
                           placeholder="Tulis isu atau cadangan anda di sini..."
                           value={noteForm.content}
                           onChange={e => setNoteForm({ ...noteForm, content: e.target.value })}
                         />
                       </div>
-                      <div className="pt-2 text-black">
-                        <button type="submit" className="w-full bg-black text-white dark:bg-white dark:text-black border-2 border-black dark:border-white font-black uppercase py-3 rounded-lg hover:-translate-y-1 hover:shadow-lg transition-all flex items-center justify-center gap-2 text-black">
+                      <div className="pt-2 text-black text-black">
+                        <button type="submit" className="w-full bg-black text-white dark:bg-white dark:text-black border-2 border-black dark:border-white font-black uppercase py-3 rounded-lg hover:-translate-y-1 hover:shadow-lg transition-all flex items-center justify-center gap-2 text-black text-black text-black">
                           <Save size={16} /> {editingNote ? 'Simpan Perubahan' : 'Tambah Nota'}
                         </button>
                       </div>

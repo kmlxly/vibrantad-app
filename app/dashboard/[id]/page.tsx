@@ -1043,7 +1043,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                             <span className={`px-1.5 py-0.5 rounded-[4px] text-[7px] font-black uppercase border border-black ${report.type === 'task' ? 'bg-orange-400 text-black' : 'bg-blue-400 text-black'}`}>
                               {report.type === 'task' ? 'AD-HOC' : 'PROJEK'}
                             </span>
-                            <h3 className="font-black text-sm uppercase leading-none dark:text-white truncate pt-0.5">
+                            <h3 className="font-black text-sm uppercase leading-tight dark:text-white break-words pt-0.5">
                               {report.title}
                             </h3>
                           </div>
@@ -1135,7 +1135,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                                     )}
                                   </div>
                                   <div className="min-w-0 flex-grow">
-                                    <h5 className="font-black text-xs uppercase dark:text-white leading-tight truncate pr-6">{report.title}</h5>
+                                    <h5 className="font-black text-xs uppercase dark:text-white leading-tight break-words pr-6">{report.title}</h5>
                                     <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                                       <span className="flex items-center gap-1 text-[8px] font-bold text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
                                         <MapPin size={8} className="text-neo-primary" /> {report.working_location || 'Office'}
@@ -1234,7 +1234,7 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                             <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase border border-black bg-zinc-800 text-white">
                               BERKAITAN LAPORAN
                             </span>
-                            <h4 className="font-black text-sm uppercase dark:text-white truncate">{report.title}</h4>
+                            <h4 className="font-black text-sm uppercase dark:text-white break-words">{report.title}</h4>
                           </div>
 
                           {report.issues && (

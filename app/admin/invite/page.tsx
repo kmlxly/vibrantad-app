@@ -5,9 +5,9 @@ import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 import { useFormStatus } from 'react-dom'
 import { inviteStaff } from '@/app/actions/inviteStaff'
-import { Loader2, Send, Shield, Mail, Briefcase, UserPlus, User, ArrowLeft } from 'lucide-react'
+import { Loader2, Send, Shield, Mail, Briefcase, UserPlus, User, ArrowLeft, Plus, Trash2 } from 'lucide-react'
 
-function SubmitButton() {
+function SubmitButton({ count }: { count: number }) {
     const { pending } = useFormStatus()
 
     return (
@@ -20,7 +20,7 @@ function SubmitButton() {
                 <Loader2 className="animate-spin w-5 h-5" />
             ) : (
                 <>
-                    Hantar Jemputan
+                    Hantar {count} Jemputan
                     <Send className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" strokeWidth={3} />
                 </>
             )}
@@ -32,6 +32,7 @@ export default function InviteStaffPage() {
     const router = useRouter()
     const [state, action] = useActionState(inviteStaff, null)
     const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)
+    const [inviteCount, setInviteCount] = useState([0]) // Array of unique IDs for rows
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -58,6 +59,16 @@ export default function InviteStaffPage() {
 
         checkAuth()
     }, [router])
+
+    const addRow = () => {
+        setInviteCount(prev => [...prev, Math.max(...prev, 0) + 1])
+    }
+
+    const removeRow = (id: number) => {
+        if (inviteCount.length > 1) {
+            setInviteCount(prev => prev.filter(i => i !== id))
+        }
+    }
 
     if (isAuthorized === null) {
         return (
@@ -92,9 +103,9 @@ export default function InviteStaffPage() {
             </div>
 
             {/* --- SCROLLABLE CONTENT LAYER --- */}
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center overflow-y-auto overflow-x-hidden p-4 supports-[min-height:100dvh]:min-h-[100dvh]">
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-y-auto overflow-x-hidden p-4 pt-20 supports-[min-height:100dvh]:min-h-[100dvh]">
                 {/* --- MAIN CARD (LANYARD STYLE) --- */}
-                <div className="relative w-[92%] max-w-sm flex flex-col items-center animate-drop-in origin-top my-auto">
+                <div className="relative w-full max-w-lg flex flex-col items-center animate-drop-in origin-top my-auto">
 
                     {/* Lanyard Strap & Clip */}
                     <div className="w-4 h-[100vh] bg-zinc-900 border-x-4 border-black absolute bottom-full left-1/2 -translate-x-1/2 -mb-4 z-0"></div>
@@ -109,13 +120,10 @@ export default function InviteStaffPage() {
                     </div>
 
                     {/* ID Card Holder */}
-                    <div className="w-full bg-white border-4 border-black rounded-xl shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] p-6 pt-10 relative overflow-hidden group hover:translate-y-[5px] transition-transform duration-500 ease-in-out">
+                    <div className="w-full bg-white border-4 border-black rounded-xl shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] p-6 pt-10 relative overflow-hidden group">
 
                         {/* Punch Hole */}
                         <div className="absolute top-4 left-1/2 -translate-x-1/2 w-16 h-3 bg-zinc-200 border-2 border-black rounded-full shadow-inner"></div>
-
-                        {/* Decorative Corner */}
-                        <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-neo-yellow rotate-45 border-t-4 border-l-4 border-black opacity-50 pointer-events-none"></div>
 
                         <div className="relative z-10 space-y-6">
                             {/* Back Button */}
@@ -143,7 +151,7 @@ export default function InviteStaffPage() {
                                 </div>
                             </div>
 
-                            <form action={action} className="space-y-4">
+                            <form action={action} className="space-y-6">
 
                                 {/* Feedback Messages */}
                                 {state?.success && (
@@ -157,82 +165,115 @@ export default function InviteStaffPage() {
                                     </div>
                                 )}
 
-                                {/* Full Name Input */}
-                                <div className="space-y-1">
-                                    <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wide ml-1 text-black">
-                                        Nama Penuh (Full Name)
-                                    </label>
-                                    <div className="relative">
-                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                                        <input
-                                            type="text"
-                                            name="full_name"
-                                            required
-                                            placeholder="e.g. Ali Bin Abu"
-                                            className="w-full bg-zinc-50 border-4 border-black rounded-lg py-2.5 pl-10 pr-3 font-bold text-sm outline-none focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all placeholder:text-zinc-400 placeholder:font-medium text-black"
-                                        />
-                                    </div>
-                                </div>
+                                <div className="space-y-8">
+                                    {inviteCount.map((id, index) => (
+                                        <div key={id} className="relative p-4 border-4 border-black bg-zinc-50 rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] space-y-4">
+                                            {inviteCount.length > 1 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeRow(id)}
+                                                    className="absolute -top-3 -right-3 bg-red-500 text-white border-2 border-black p-1 rounded hover:bg-red-600 transition-colors z-20"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            )}
 
-                                {/* Email Input */}
-                                <div className="space-y-1">
-                                    <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wide ml-1 text-black">
-                                        Email Pekerja
-                                    </label>
-                                    <div className="relative">
-                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                                        <input
-                                            type="email"
-                                            name="email"
-                                            required
-                                            placeholder="staff@vibrant.com"
-                                            className="w-full bg-zinc-50 border-4 border-black rounded-lg py-2.5 pl-10 pr-3 font-bold text-sm outline-none focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all placeholder:text-zinc-400 placeholder:font-medium text-black"
-                                        />
-                                    </div>
-                                </div>
+                                            <div className="absolute -top-3 -left-3 bg-black text-white px-2 py-1 text-[10px] font-black rounded border-2 border-black">
+                                                STAFF #{index + 1}
+                                            </div>
 
-                                {/* Job Title Input */}
-                                <div className="space-y-1">
-                                    <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wide ml-1 text-black">
-                                        Jawatan (Job Title)
-                                    </label>
-                                    <div className="relative">
-                                        <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                                        <input
-                                            type="text"
-                                            name="job_title"
-                                            required
-                                            placeholder="e.g. Graphic Designer"
-                                            className="w-full bg-zinc-50 border-4 border-black rounded-lg py-2.5 pl-10 pr-3 font-bold text-sm outline-none focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all placeholder:text-zinc-400 placeholder:font-medium text-black"
-                                        />
-                                    </div>
-                                </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {/* Full Name Input */}
+                                                <div className="space-y-1">
+                                                    <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wide ml-1 text-black">
+                                                        Nama Penuh
+                                                    </label>
+                                                    <div className="relative">
+                                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                                                        <input
+                                                            type="text"
+                                                            name="full_name"
+                                                            required
+                                                            placeholder="e.g. Ali Bin Abu"
+                                                            className="w-full bg-white border-4 border-black rounded-lg py-2 pl-10 pr-3 font-bold text-xs outline-none focus:bg-white focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all text-black"
+                                                        />
+                                                    </div>
+                                                </div>
 
-                                {/* Role Select */}
-                                <div className="space-y-1">
-                                    <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wide ml-1 text-black">
-                                        System Role
-                                    </label>
-                                    <div className="relative">
-                                        <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 z-10" />
-                                        <select
-                                            name="role"
-                                            required
-                                            defaultValue="user"
-                                            className="w-full bg-zinc-50 border-4 border-black rounded-lg py-2.5 pl-10 pr-3 font-bold text-sm outline-none focus:bg-white focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:-translate-y-1 transition-all appearance-none cursor-pointer text-black relative z-0"
-                                        >
-                                            <option value="user">User</option>
-                                            <option value="hr">HR (Human Resources)</option>
-                                            <option value="admin">Admin</option>
-                                        </select>
-                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none z-10">
-                                            <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-black"></div>
+                                                {/* Email Input */}
+                                                <div className="space-y-1">
+                                                    <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wide ml-1 text-black">
+                                                        Email Pekerja
+                                                    </label>
+                                                    <div className="relative">
+                                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                                                        <input
+                                                            type="email"
+                                                            name="email"
+                                                            required
+                                                            placeholder="staff@vibrant.com"
+                                                            className="w-full bg-white border-4 border-black rounded-lg py-2 pl-10 pr-3 font-bold text-xs outline-none focus:bg-white focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all text-black"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Job Title Input */}
+                                                <div className="space-y-1">
+                                                    <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wide ml-1 text-black">
+                                                        Jawatan (Job Title)
+                                                    </label>
+                                                    <div className="relative">
+                                                        <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                                                        <input
+                                                            type="text"
+                                                            name="job_title"
+                                                            required
+                                                            placeholder="e.g. Graphic Designer"
+                                                            className="w-full bg-white border-4 border-black rounded-lg py-2 pl-10 pr-3 font-bold text-xs outline-none focus:bg-white focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all text-black"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Role Select */}
+                                                <div className="space-y-1">
+                                                    <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wide ml-1 text-black">
+                                                        System Role
+                                                    </label>
+                                                    <div className="relative">
+                                                        <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 z-10" />
+                                                        <select
+                                                            name="role"
+                                                            required
+                                                            defaultValue="user"
+                                                            className="w-full bg-white border-4 border-black rounded-lg py-2 pl-10 pr-3 font-bold text-xs outline-none appearance-none cursor-pointer text-black relative z-0"
+                                                        >
+                                                            <option value="user">User</option>
+                                                            <option value="hr">HR (Human Resources)</option>
+                                                            <option value="admin">Admin</option>
+                                                        </select>
+                                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none z-10">
+                                                            <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[6px] border-t-black"></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
+                                    ))}
                                 </div>
 
-                                <div className="pt-2">
-                                    <SubmitButton />
+                                <div className="flex flex-col gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={addRow}
+                                        className="w-full bg-white text-black border-4 border-black rounded-lg py-2 font-black uppercase text-[10px] tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Plus size={16} />
+                                        Tambah Pekerja Lain
+                                    </button>
+
+                                    <div className="pt-2">
+                                        <SubmitButton count={inviteCount.length} />
+                                    </div>
                                 </div>
 
                             </form>
@@ -240,7 +281,7 @@ export default function InviteStaffPage() {
                     </div>
 
                     {/* Footer */}
-                    <div className="text-center mt-6 space-y-1 pb-4">
+                    <div className="text-center mt-6 space-y-1 pb-10">
                         <p className="text-[10px] font-black opacity-50 uppercase tracking-[0.2em] text-black">Vibrant Staff Management System</p>
                         <p className="text-[9px] font-bold opacity-30 uppercase tracking-wider text-black">Secure Admin Portal</p>
                     </div>

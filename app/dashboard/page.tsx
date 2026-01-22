@@ -16,6 +16,7 @@ type Project = {
   profiles?: { full_name: string; avatar_url: string | null; email?: string };
   status?: string;
   color?: string;
+  created_at: string;
 }
 type WorkingRequest = {
   id: number;
@@ -575,10 +576,10 @@ export default function Dashboard() {
                     </div>
                     <div className="p-4 bg-zinc-50 dark:bg-zinc-800 border-t-2 border-black dark:border-white flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full border border-black overflow-hidden bg-white shrink-0">
-                          {proj.profiles?.avatar_url ? <img src={proj.profiles.avatar_url} className="w-full h-full object-cover" /> : <User size={14} className="m-auto mt-1" />}
-                        </div>
-                        <span className="text-[10px] font-bold uppercase truncate max-w-[80px] dark:text-white">{proj.profiles?.full_name?.split(' ')[0]}</span>
+                        <Calendar size={12} className="text-zinc-400" />
+                        <span className="text-[10px] font-bold uppercase text-zinc-400">
+                          {new Date(proj.created_at).toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </span>
                       </div>
                       {isAdmin && (
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

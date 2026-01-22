@@ -11,12 +11,11 @@ export async function inviteStaff(prevState: any, formData: FormData) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-    // 1. First check if the requester is an admin using server client with cookies
+    // 1. First check if the requester is an admin
     const authSupabase = await createServerClient()
     const { data: { user: requester }, error: authError } = await authSupabase.auth.getUser()
 
     if (authError || !requester) {
-        console.error('[InviteStaff] Auth Error:', authError)
         return { error: 'Sesi tamat. Sila log masuk semula.' }
     }
 
@@ -31,7 +30,6 @@ export async function inviteStaff(prevState: any, formData: FormData) {
     }
 
     if (!supabaseServiceKey) {
-        console.error('[InviteStaff] Error: SUPABASE_SERVICE_ROLE_KEY is missing')
         return { error: '⚠️ Configuration Error: Missing Service Role Key.' }
     }
 
@@ -42,44 +40,65 @@ export async function inviteStaff(prevState: any, formData: FormData) {
         }
     })
 
-    const email = formData.get('email') as string
-    const fullName = formData.get('full_name') as string
-    const role = formData.get('role') as string
-    const jobTitle = formData.get('job_title') as string
+    // Support both single and multiple entries
+    const emails = formData.getAll('email') as string[]
+    const fullNames = formData.getAll('full_name') as string[]
+    const roles = formData.getAll('role') as string[]
+    const jobTitles = formData.getAll('job_title') as string[]
 
-    // Debug inputs
-    console.log('[InviteStaff] Inputs:', { email, fullName, role, jobTitle })
-
-    if (!email || !fullName || !role || !jobTitle) {
-        return { error: 'Sila isi semua maklumat mandatori.' }
+    if (!emails.length) {
+        return { error: 'Sila isi maklumat jemputan.' }
     }
 
-    // Get the dynamic site URL from headers
+    // Get the dynamic site URL
     const headersList = await headers()
     const host = headersList.get('host')
     const protocol = host?.includes('localhost') ? 'http' : 'https'
     const siteUrl = `${protocol}://${host}`
 
-    try {
-        const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-            redirectTo: `${siteUrl}/update-password`,
-            data: {
-                full_name: fullName,
-                role: role,
-                job_title: jobTitle,
-                setup_complete: false,
-            },
-        })
-
-        if (error) {
-            console.error('[InviteStaff] Supabase Invite Error:', error)
-            return { error: error.message }
-        }
-
-        console.log('[InviteStaff] Success:', data)
-        return { success: `Jemputan telah dihantar ke ${email}` }
-    } catch (err) {
-        console.error('[InviteStaff] Unexpected Exception:', err)
-        return { error: 'Terdapat ralat semasa menghantar jemputan.' }
+    const results = {
+        success: 0,
+        failed: 0,
+        errors: [] as string[]
     }
+
+    for (let i = 0; i < emails.length; i++) {
+        const email = emails[i]
+        const fullName = fullNames[i]
+        const role = roles[i]
+        const jobTitle = jobTitles[i]
+
+        if (!email || !fullName || !role || !jobTitle) continue
+
+        try {
+            const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
+                redirectTo: `${siteUrl}/update-password`,
+                data: {
+                    full_name: fullName,
+                    role: role,
+                    job_title: jobTitle,
+                    setup_complete: false,
+                },
+            })
+
+            if (error) {
+                results.failed++
+                results.errors.push(`${email}: ${error.message}`)
+            } else {
+                results.success++
+            }
+        } catch (err) {
+            results.failed++
+            results.errors.push(`${email}: Unexpected error`)
+        }
+    }
+
+    if (results.failed > 0) {
+        return {
+            error: `Berjaya: ${results.success}, Gagal: ${results.failed}. ${results.errors.join(', ')}`,
+            success: results.success > 0 ? `Berjaya menghantar ${results.success} jemputan.` : undefined
+        }
+    }
+
+    return { success: `Berjaya menghantar jemputan kepada ${results.success} orang.` }
 }

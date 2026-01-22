@@ -2,7 +2,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { LogOut, FolderPlus, Trash2, FolderOpen, User, Edit3, X, Check, Briefcase, Shield, Crown, Filter, Camera, Loader2, Building2, Calendar, Clock, ChevronDown, Sun, Moon, UserPlus, MapPin, Send, CheckCircle2, XCircle } from 'lucide-react'
+import { LogOut, FolderPlus, Trash2, FolderOpen, User, Edit3, X, Check, Briefcase, Shield, Crown, Filter, Camera, Loader2, Building2, Calendar, Clock, ChevronDown, Sun, Moon, UserPlus, MapPin, Send, CheckCircle2, XCircle, Hash } from 'lucide-react'
 import { useTheme } from '@/lib/ThemeProvider'
 import { notifyAllAdmins, notifyStaffStatusUpdate } from '@/app/actions/emailActions'
 
@@ -423,9 +423,18 @@ export default function Dashboard() {
                 </h1>
               </div>
               <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
-                <span className="bg-zinc-100 dark:bg-zinc-800 border-2 border-black dark:border-white px-2.5 py-1 rounded font-bold text-[10px] uppercase dark:text-white">{profile?.job_title}</span>
-                <span className="bg-zinc-100 dark:bg-zinc-800 border-2 border-black dark:border-white px-2.5 py-1 rounded font-bold text-[10px] uppercase dark:text-white">{profile?.company_name}</span>
-                <span className="bg-black text-white px-2.5 py-1 rounded font-black text-[10px] uppercase tracking-widest">{profile?.role}</span>
+                <span className="bg-zinc-100 dark:bg-zinc-800 border-2 border-black dark:border-white px-2.5 py-1 rounded font-bold text-[10px] uppercase dark:text-white flex items-center gap-1.5">
+                  <Briefcase size={12} className="text-zinc-400" />
+                  {profile?.job_title}
+                </span>
+                <span className="bg-zinc-100 dark:bg-zinc-800 border-2 border-black dark:border-white px-2.5 py-1 rounded font-bold text-[10px] uppercase dark:text-white flex items-center gap-1.5">
+                  <Building2 size={12} className="text-zinc-400" />
+                  {profile?.company_name}
+                </span>
+                <span className="bg-black text-white px-2.5 py-1 rounded font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5">
+                  {profile?.role === 'admin' ? <Crown size={12} className="text-neo-yellow" /> : <Shield size={12} className="text-white/70" />}
+                  {profile?.role}
+                </span>
               </div>
             </div>
           </div>
@@ -568,8 +577,13 @@ export default function Dashboard() {
                     <div className={`h-2.5 w-full ${baseColorMap[proj.color || 'neo-yellow']}`}></div>
                     <div className="p-5 flex-grow">
                       <div className="flex justify-between items-start mb-4">
-                        <span className="text-[10px] font-black uppercase px-2 py-1 bg-zinc-100 rounded border border-black text-zinc-400">#{proj.id}</span>
-                        <span className={`text-[10px] font-black uppercase px-2 py-1 rounded border border-black ${proj.status === 'completed' ? 'bg-black text-white' : 'bg-green-400'}`}>{proj.status || 'Active'}</span>
+                        <span className="text-[10px] font-black uppercase px-2 py-1 bg-zinc-100 rounded border border-black text-zinc-400 flex items-center gap-1">
+                          <Hash size={10} /> {proj.id}
+                        </span>
+                        <span className={`text-[10px] font-black uppercase px-2 py-1 rounded border border-black flex items-center gap-1.5 ${proj.status === 'completed' ? 'bg-black text-white' : 'bg-green-400'}`}>
+                          {(!proj.status || proj.status === 'active') && <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>}
+                          {proj.status || 'Active'}
+                        </span>
                       </div>
                       <h3 className="text-xl font-black uppercase leading-tight mb-2 dark:text-white group-hover:underline">{proj.name}</h3>
                       <p className="text-xs font-medium text-zinc-500 line-clamp-3 leading-relaxed">{proj.description}</p>

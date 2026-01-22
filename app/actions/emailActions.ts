@@ -13,7 +13,7 @@ export async function sendEmail({ to, subject, text, html }: EmailParams) {
   try {
     if (!process.env.SMTP_HOST) {
       console.error('SMTP Config Missing: SMTP_HOST is not set.')
-      return { success: false, error: 'Konfigurasi SMTP (SMTP_HOST) tidak dijumpai dalam .env' }
+      return { success: false, error: 'Konfigurasi SMTP (SMTP_HOST) tidak dijumpai dalam .env. Sila hubungi admin.' }
     }
 
     const transporter = createTransporter()

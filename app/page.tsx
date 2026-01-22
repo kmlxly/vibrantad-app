@@ -36,11 +36,16 @@ export default function LoginPage() {
 
     // Listen for auth state changes (especially for hash recovery)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth event:', event)
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && window.location.hash.includes('type=invite'))) {
-        // Use window.location as a fallback to ensure hash is preserved or fresh session is used
         router.replace('/update-password' + window.location.hash)
-      } else if (session && event === 'SIGNED_IN') {
+      } else if (event === 'SIGNED_IN' && session) {
+        // Only redirect if we ARE on the login page (not being signed out)
         router.push('/dashboard')
+      } else if (event === 'SIGNED_OUT') {
+        // Clear everything for safety
+        localStorage.removeItem('vibrant_device_id')
+        router.push('/')
       }
     })
 

@@ -216,27 +216,34 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     try {
-      // 1. Clear session from DB so others see user as offline IMMEDIATELY
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
-        // Use non-blocking update
-        supabase
+        await supabase
           .from('profiles')
           .update({
             active_session_id: null,
             last_seen: null
           })
           .eq('id', session.user.id)
-          .then(() => { })
       }
     } catch (err) {
       console.error("Logout cleanup error:", err)
     } finally {
       // 2. Clear local storage & Sign out
       localStorage.removeItem('vibrant_device_id')
+
+      // Remove any supabase auth tokens manually just in case
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && (key.includes('supabase.auth.token') || key.includes('sb-'))) {
+          localStorage.removeItem(key)
+        }
+      }
+
       await supabase.auth.signOut()
-      // Use window.location.href to force a clean slate on the login page
-      window.location.href = '/'
+
+      // Hard redirect to root
+      window.location.replace('/')
     }
   }
 

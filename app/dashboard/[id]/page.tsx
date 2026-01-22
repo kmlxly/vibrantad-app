@@ -71,18 +71,26 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
-        supabase
+        await supabase
           .from('profiles')
           .update({ active_session_id: null, last_seen: null })
           .eq('id', session.user.id)
-          .then(() => { })
       }
     } catch (err) {
       console.error("Logout cleanup error:", err)
     } finally {
       localStorage.removeItem('vibrant_device_id')
+
+      // Remove any supabase auth tokens manually just in case
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && (key.includes('supabase.auth.token') || key.includes('sb-'))) {
+          localStorage.removeItem(key)
+        }
+      }
+
       await supabase.auth.signOut()
-      window.location.href = '/'
+      window.location.replace('/')
     }
   }
 

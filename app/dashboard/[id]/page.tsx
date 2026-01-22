@@ -1015,81 +1015,84 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
                       <div
                         key={report.id}
                         onClick={() => setSelectedReport(report)}
-                        className={`group flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer ${index !== filteredReports.length - 1 ? 'border-b border-zinc-200 dark:border-zinc-700' : ''}`}
+                        className={`group flex flex-col sm:flex-row items-start gap-2 py-2 sm:py-3 px-3 sm:px-4 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer ${index !== filteredReports.length - 1 ? 'border-b border-zinc-200 dark:border-zinc-700' : ''}`}
                       >
-                        {/* Left: Date & ID (Mobile: Top Row) */}
-                        <div className="w-full sm:w-auto min-w-[90px] sm:text-right flex sm:block justify-between items-center sm:items-end mb-1 sm:mb-0">
-                          <div className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider leading-none">
-                            {report.start_date ? new Date(report.start_date).toLocaleDateString('default', { day: '2-digit', month: 'short' }) : report.task_date ? new Date(report.task_date).toLocaleDateString('default', { day: '2-digit', month: 'short' }) : '--'}
-                          </div>
-                          <div className="text-[9px] font-bold text-zinc-300 dark:text-zinc-600 mt-0.5">
-                            {report.end_date ? `Hingga ${new Date(report.end_date).toLocaleDateString('default', { day: '2-digit', month: 'short' })}` : `ID: #${report.id}`}
-                          </div>
-                          {/* Creator Avatar - More compact */}
-                          <div className="mt-1 flex justify-end">
-                            <div className="w-6 h-6 rounded-full border border-black bg-zinc-100 overflow-hidden flex items-center justify-center shadow-sm" title={Array.isArray(report.profiles) ? report.profiles[0]?.full_name : report.profiles?.full_name}>
-                              {(Array.isArray(report.profiles) ? report.profiles[0]?.avatar_url : report.profiles?.avatar_url) ? (
-                                <img src={Array.isArray(report.profiles) ? report.profiles[0].avatar_url : report.profiles?.avatar_url} alt="Staff" className="w-full h-full object-cover" />
-                              ) : (
-                                <User size={12} className="text-zinc-400" />
-                              )}
-                            </div>
+                        {/* 1. Avatar (Desktop Only) */}
+                        <div className="hidden sm:flex shrink-0 mt-1">
+                          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-black bg-zinc-100 overflow-hidden flex items-center justify-center shadow-neo-sm">
+                            {(Array.isArray(report.profiles) ? report.profiles[0]?.avatar_url : report.profiles?.avatar_url) ? (
+                              <img src={Array.isArray(report.profiles) ? report.profiles[0].avatar_url : report.profiles?.avatar_url} alt="Staff" className="w-full h-full object-cover" />
+                            ) : (
+                              <User size={14} className="text-zinc-400" />
+                            )}
                           </div>
                         </div>
 
-                        {/* Middle: Content */}
+                        {/* 2. ID & Date Section (Desktop Only) */}
+                        <div className="hidden sm:flex sm:w-[65px] text-right flex-col justify-between items-end shrink-0 sm:mt-1 gap-0.5">
+                          <span className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500">
+                            #{report.id}
+                          </span>
+                          <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider leading-none">
+                            {report.start_date ? new Date(report.start_date).toLocaleDateString('default', { day: '2-digit', month: 'short' }) : report.task_date ? new Date(report.task_date).toLocaleDateString('default', { day: '2-digit', month: 'short' }) : '--'}
+                          </span>
+                        </div>
+
+                        {/* 3. Content Area */}
                         <div className="flex-grow min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-1">
-                            <span className={`px-1.5 py-0.5 rounded-[4px] text-[7px] font-black uppercase border border-black ${report.type === 'task' ? 'bg-orange-400 text-black' : 'bg-blue-400 text-black'}`}>
+                          {/* Title & Badge */}
+                          <div className="flex items-start gap-1.5 mb-1">
+                            <span className={`shrink-0 mt-0.5 px-2.5 py-0.5 rounded-[4px] text-[7px] font-black uppercase border border-black ${report.type === 'task' ? 'bg-orange-400 text-black' : 'bg-blue-400 text-black'}`}>
                               {report.type === 'task' ? 'AD-HOC' : 'PROJEK'}
                             </span>
-                            <h3 className="font-black text-sm uppercase leading-tight dark:text-white break-words pt-0.5">
+                            <h3 className="flex-grow font-black text-sm uppercase leading-tight dark:text-white break-words pt-0.5">
                               {report.title}
                             </h3>
                           </div>
 
-                          {/* Meta information row below title */}
-                          <div className="flex flex-wrap items-center gap-2 mt-1 mb-1.5 px-0.5">
-                            <span className="flex items-center gap-1 text-[9px] font-bold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/50 px-1.5 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700/50">
-                              <MapPin size={9} className="text-neo-primary" /> {report.working_location || 'Office'}
+                          {/* Meta Information Row */}
+                          <div className="flex flex-wrap items-center gap-1.5 mb-1 px-0.5">
+                            <span className="flex items-center gap-1 text-[9px] font-bold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/50 px-2.5 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700/50">
+                              <MapPin size={8} className="text-neo-primary" /> {report.working_location || 'Office'}
                             </span>
-                            <span className="flex items-center gap-1 text-[9px] font-bold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/50 px-1.5 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700/50">
-                              <User size={9} className="text-blue-500" /> {Array.isArray(report.profiles) ? report.profiles[0]?.full_name?.split(' ')[0] : report.profiles?.full_name?.split(' ')[0] || 'Unknown'}
-                            </span>
-                            <span className={`text-[8px] font-black uppercase tracking-tight px-1.5 py-0.5 rounded border ${report.status === 'Done' ? 'bg-green-100 text-green-700 border-green-200' : report.status === 'Blocked' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'}`}>
+                            <span className={`text-[8px] font-black uppercase tracking-tight px-2.5 py-0.5 rounded border ${report.status === 'Done' ? 'bg-green-100 text-green-700 border-green-200' : report.status === 'Blocked' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'}`}>
                               {report.status}
                             </span>
-                            {/* Verification Badge */}
-                            {(() => {
-                              const approvedReq = findApprovedRequest(report.user_id, report.task_date || report.start_date, report.working_location);
-                              if (approvedReq) {
-                                return (
-                                  <span className="flex items-center gap-1 text-[8px] font-black uppercase bg-green-500 text-white px-1.5 py-0.5 rounded-full shadow-sm animate-pulse border border-black/10" title={`Alasan: ${approvedReq.reason}`}>
-                                    <ShieldCheck size={9} /> Verified
-                                  </span>
-                                );
-                              }
-                              return null;
-                            })()}
-                            {/* Attachment Badge */}
-                            {report.attachment_url && (
-                              <span className="flex items-center gap-1 text-[8px] font-black uppercase bg-neo-yellow text-black px-1.5 py-0.5 rounded-full border border-black shadow-sm">
-                                <Paperclip size={9} /> {report.attachment_name === 'Link' ? 'LINK' : 'FILE'}
-                              </span>
+                            {/* Icons only for verified/attachment to save space */}
+                            {findApprovedRequest(report.user_id, report.task_date || report.start_date, report.working_location) && (
+                              <ShieldCheck size={10} className="text-green-500 animate-pulse" />
                             )}
+                            {report.attachment_url && <Paperclip size={10} className="text-neo-primary" />}
                           </div>
-                          <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 line-clamp-1 leading-tight">
+
+                          <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 whitespace-pre-wrap break-words leading-relaxed px-0.5">
                             {report.outcome}
                           </p>
                         </div>
 
-                        {/* Right: Actions (Visible on Hover) */}
-                        <div className="flex items-center gap-4 w-full sm:w-auto mt-2 sm:mt-0 justify-end shrink-0">
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Actions & Mobile Metadata */}
+                        <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto shrink-0 mt-2 sm:mt-0 pt-2 sm:pt-0 border-t border-zinc-100 dark:border-zinc-800 sm:border-0">
+                          {/* Mobile Only: Avatar + Date + ID */}
+                          <div className="sm:hidden flex items-center gap-2">
+                            <div className="w-5 h-5 rounded-full border border-black bg-zinc-100 overflow-hidden shrink-0">
+                              {(Array.isArray(report.profiles) ? report.profiles[0]?.avatar_url : report.profiles?.avatar_url) ? (
+                                <img src={Array.isArray(report.profiles) ? report.profiles[0].avatar_url : report.profiles?.avatar_url} alt="Staff" className="w-full h-full object-cover" />
+                              ) : (
+                                <User size={8} className="text-zinc-400 m-auto" />
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[8px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-tighter">
+                              <span>#{report.id}</span>
+                              <span className="text-zinc-300 dark:text-zinc-700">•</span>
+                              <span>{report.start_date ? new Date(report.start_date).toLocaleDateString('default', { day: '2-digit', month: 'short' }) : report.task_date ? new Date(report.task_date).toLocaleDateString('default', { day: '2-digit', month: 'short' }) : '--'}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-1.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                             {(userRole === 'admin' || report.user_id === userId) && (
                               <>
-                                <button onClick={(e) => { e.stopPropagation(); handleEditReport(report); }} className="p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded text-zinc-500 dark:text-zinc-400" title="Edit"><Edit3 size={14} /></button>
-                                <button onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id); }} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-400 hover:text-red-500" title="Padam"><Trash2 size={14} /></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleEditReport(report); }} className="p-1 px-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 sm:border-0" title="Edit"><Edit3 size={12} /></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id); }} className="p-1 px-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-300 hover:text-red-500 border border-zinc-200 dark:border-zinc-700 sm:border-0" title="Padam"><Trash2 size={12} /></button>
                               </>
                             )}
                           </div>
@@ -1548,6 +1551,6 @@ export default function ProjectDetails({ params }: { params: Promise<{ id: strin
           </div>
         </div>
       </div>
-    </div>
+    </div >
   )
 }

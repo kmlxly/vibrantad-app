@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 import { LogOut, FolderPlus, Trash2, FolderOpen, User, Edit3, X, Check, Briefcase, Shield, Crown, Filter, Camera, Loader2, Building2, Calendar, Clock, ChevronDown, Sun, Moon, UserPlus, MapPin, Send, CheckCircle2, XCircle, Hash } from 'lucide-react'
@@ -21,7 +21,7 @@ type Project = {
 type WorkingRequest = {
   id: number;
   user_id: string;
-  type: 'WFH' | 'Remote' | 'Lapangan';
+  type: 'WFH' | 'Remote' | 'Lapangan' | 'Bercuti';
   start_date: string;
   end_date: string;
   reason: string;
@@ -66,6 +66,12 @@ export default function Dashboard() {
   // Dashboard View State
   const [activeTab, setActiveTab] = useState<'projects' | 'working'>('projects')
 
+  // Tooltip State
+  const [tooltipData, setTooltipData] = useState<{ text: string; reason: string | null } | null>(null)
+  const tooltipRef = useRef<HTMLDivElement>(null)
+
+
+
   // Live Date State
   const [currentTime, setCurrentTime] = useState(new Date())
 
@@ -91,14 +97,8 @@ export default function Dashboard() {
   // Poll for online status & Send Heartbeat every 30 seconds
   useEffect(() => {
     const pollInterval = setInterval(async () => {
-      // 1. Send Heartbeat
+      // 1. Get Session for sorting (Heartbeat moved to UserPresence component)
       const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        await supabase
-          .from('profiles')
-          .update({ last_seen: new Date().toISOString() })
-          .eq('id', session.user.id)
-      }
 
       // 2. Refresh Staff List (including sorting)
       const { data: allStaffRaw } = await supabase
@@ -117,6 +117,16 @@ export default function Dashboard() {
         setStaffList(sortedStaff)
       } else {
         setStaffList(allStaff)
+      }
+
+      // 3. Refresh Working Requests (To ensure status updates automatically)
+      const { data: requestsResult } = await supabase
+        .from('working_requests')
+        .select('*, profiles!user_id(full_name, avatar_url, email)')
+        .order('created_at', { ascending: false })
+
+      if (requestsResult) {
+        setWorkingRequests(requestsResult)
       }
 
     }, 30000)
@@ -383,6 +393,61 @@ export default function Dashboard() {
     setShowModal(true)
   }
 
+  // ADMIN QUICK STATUS TOGGLE
+  const handleAdminStatusChange = async (newType: 'Office' | 'WFH' | 'Remote' | 'Lapangan' | 'Bercuti') => {
+    if (!profile || profile.role !== 'admin') return;
+
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    try {
+      // 1. Find if there is ALREADY an approved request for today
+      // actually we can just check 'workingRequests' state for efficiency
+      const existingReqRaw = workingRequests.find(req => {
+        if (req.user_id !== user.id || req.status !== 'approved') return false;
+        return today >= req.start_date && today <= req.end_date;
+      });
+
+      if (newType === 'Office') {
+        // If switching to Office, we DELETE the existing request for today if it matches 'today only'
+        // OR we just assume admin overrides for TODAY.
+        // For simplicity: If there's a request covering today, we delete it?
+        // Warning: If request is "Mon-Fri" and today is "Wed", deleting it deletes whole week.
+        // Admin override is powerful. Let's assume for "Quick Toggle", it manages "Today's" status.
+        // Better logic: If start=end=today, delete it. If range, maybe warn?
+        // Let's keep it simple: "Toggle" creates/updates a SINGLE DAY record for today.
+
+        if (existingReqRaw) {
+          if (confirm(`Anda mempunyai status aktif "${existingReqRaw.type}". Tukar kembali ke Office akan memadam rekod ini. Teruskan?`)) {
+            await supabase.from('working_requests').delete().eq('id', existingReqRaw.id);
+          } else {
+            return;
+          }
+        }
+      } else {
+        // Switching to WFH/Remote/etc
+        // If exists, update type. If not, insert.
+        if (existingReqRaw) {
+          await supabase.from('working_requests').update({ type: newType }).eq('id', existingReqRaw.id);
+        } else {
+          await supabase.from('working_requests').insert([{
+            user_id: user.id,
+            type: newType,
+            start_date: today,
+            end_date: today,
+            status: 'approved',
+            reason: 'Admin Manual Status Update'
+          }]);
+        }
+      }
+      fetchData(); // Refresh UI
+    } catch (error) {
+      console.error(error);
+      alert('Gagal mengemaskini status.');
+    }
+  }
+
   const resetModal = () => {
     setShowModal(false)
     setEditingProject(null)
@@ -459,32 +524,54 @@ export default function Dashboard() {
               <div className="bg-neo-primary p-2.5 rounded-lg border-2 border-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"><FolderOpen size={24} /></div>
             </div>
 
-            <div className="bg-black text-white p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between shadow-[4px_4px_0px_0px_rgba(253,224,71,1)] gap-4 sm:gap-0">
-              <div className="flex flex-row sm:flex-col justify-between w-full sm:w-auto items-center sm:items-start">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase text-zinc-500">{currentTime.toLocaleDateString('ms-MY', { weekday: 'long' })}</span>
-                  <span className="text-xl font-black italic uppercase leading-none">{currentTime.toLocaleDateString('ms-MY', { day: '2-digit', month: 'short' })}</span>
+            <div className="bg-black text-white p-3 rounded-xl flex flex-row items-center justify-between gap-3 shadow-[4px_4px_0px_0px_rgba(253,224,71,1)] h-full">
+              <div className="flex items-center gap-3">
+                <div className="bg-zinc-800 p-2 rounded-lg border border-zinc-700 hidden sm:block">
+                  <Clock size={16} className="text-neo-yellow" />
                 </div>
-                {/* Mobile only time display moved here if needed, or keep separate */}
-                <span className="text-2xl font-black sm:hidden">{currentTime.toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}</span>
+                <div className="flex flex-col">
+                  <span className="text-lg font-black leading-none tracking-tight tabular-nums">
+                    {currentTime.toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">
+                    {currentTime.toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', weekday: 'short' })}
+                  </span>
+                </div>
               </div>
 
-              <div className="text-right hidden sm:block">
-                <span className="text-2xl font-black">{currentTime.toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
-
-              <div className="flex gap-2 w-full sm:w-auto justify-end">
-                <button onClick={toggleTheme} className="bg-white text-black p-2 rounded-lg hover:bg-neo-yellow transition-colors flex-1 sm:flex-none justify-center flex">
-                  {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              <div className="flex gap-1.5 items-center">
+                {isAdmin && (
+                  <select
+                    onChange={(e) => handleAdminStatusChange(e.target.value as any)}
+                    value={(() => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const activeReq = workingRequests.find(r => r.user_id === profile?.id && r.status === 'approved' && today >= new Date(r.start_date) && today <= new Date(r.end_date));
+                      return activeReq ? activeReq.type : 'Office';
+                    })()}
+                    className="bg-zinc-900 text-white px-2 py-1.5 rounded-md border border-zinc-700 hover:border-white transition-colors font-bold uppercase text-[9px] outline-none cursor-pointer text-center appearance-none"
+                    style={{ backgroundImage: 'none' }}
+                  >
+                    <option value="Office">🏢 Office</option>
+                    <option value="WFH">🏠 WFH</option>
+                    <option value="Remote">🌐 Remote</option>
+                    <option value="Lapangan">🚗 Site</option>
+                    <option value="Bercuti">🏖 Cuti</option>
+                  </select>
+                )}
+                <button onClick={toggleTheme} className="bg-white text-black w-8 h-8 rounded-md hover:bg-neo-yellow transition-colors flex items-center justify-center">
+                  {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
                 </button>
-                <button onClick={handleLogout} className="bg-white text-black p-2 rounded-lg hover:bg-neo-primary hover:text-white transition-colors flex-1 sm:flex-none justify-center flex">
-                  <LogOut size={20} />
+                <button onClick={handleLogout} className="bg-white text-black w-8 h-8 rounded-md hover:bg-neo-primary hover:text-white transition-colors flex items-center justify-center">
+                  <LogOut size={14} />
                 </button>
               </div>
             </div>
           </div>
         </div>
       </header>
+
+      {/* REMOVED OLD ADMIN TOGGLE UI */}
 
       {/* DASHBOARD TABS */}
       <div className="grid grid-cols-2 sm:flex gap-2 mb-8 bg-zinc-100 dark:bg-zinc-800 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl w-full sm:w-fit">
@@ -527,10 +614,53 @@ export default function Dashboard() {
               </div>
               <div className="flex gap-4">
                 {staffList.map((staff) => {
-                  const isOnline = staff.last_seen && new Date().getTime() - new Date(staff.last_seen).getTime() < 120000; // 2 minutes window
+                  const isOnline = staff.last_seen && new Date().getTime() - new Date(staff.last_seen).getTime() < 120000;
+
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+
+                  const activeReq = workingRequests.find(req => {
+                    if (req.user_id !== staff.id || req.status !== 'approved') return false;
+                    const start = new Date(req.start_date);
+                    start.setHours(0, 0, 0, 0);
+                    const end = new Date(req.end_date);
+                    end.setHours(0, 0, 0, 0);
+                    return today >= start && today <= end;
+                  });
+
+                  const workStatus = activeReq ? activeReq.type : 'Office';
+
                   return (
-                    <div key={staff.id} className="flex flex-col items-center gap-2 group">
-                      <div className={`relative w-14 h-14 rounded-full border-4 ${isOnline ? 'border-green-400 p-0.5' : 'border-zinc-200 dark:border-zinc-800'} transition-all`}>
+                    <div
+                      key={staff.id}
+                      className="flex flex-col items-center gap-2 group relative cursor-help select-none"
+                      onMouseEnter={() => setTooltipData({ text: workStatus, reason: null })} // Re-using tooltipData for generic usage
+                      onMouseLeave={() => setTooltipData(null)}
+                      onMouseMove={(e) => {
+                        if (tooltipRef.current) {
+                          const x = e.clientX + 15;
+                          const y = e.clientY + 15;
+                          const isRightOverflow = x + 150 > window.innerWidth;
+                          tooltipRef.current.style.left = isRightOverflow ? `${e.clientX - 120}px` : `${x}px`;
+                          tooltipRef.current.style.top = `${y}px`;
+                        }
+                      }}
+                      onClick={(e) => {
+                        // Mobile / Click Behavior: Snap to bottom of element
+                        e.stopPropagation();
+                        // Small delay to prevent mouseMove from overriding immediately if it's a hybrid device
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setTooltipData({ text: workStatus, reason: null });
+
+                        setTimeout(() => {
+                          if (tooltipRef.current) {
+                            tooltipRef.current.style.left = `${rect.left + (rect.width / 2) - 40}px`; // Center ish
+                            tooltipRef.current.style.top = `${rect.bottom + 10}px`; // Below
+                          }
+                        }, 10);
+                      }}
+                    >
+                      <div className={`relative w-14 h-14 rounded-full border-4 ${isOnline ? 'border-green-400 p-0.5' : 'border-zinc-200 dark:border-zinc-800'} transition-all bg-white dark:bg-zinc-900 shadow-sm`}>
                         <div className="w-full h-full rounded-full border-2 border-black overflow-hidden bg-white">
                           {staff.avatar_url ? (
                             <img src={staff.avatar_url} className="w-full h-full object-cover" alt={staff.full_name} />
@@ -541,7 +671,7 @@ export default function Dashboard() {
                           )}
                         </div>
                         {isOnline && (
-                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-zinc-900 rounded-full"></div>
+                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-zinc-900 rounded-full animate-pulse"></div>
                         )}
                       </div>
                       <span className={`text-[9px] font-black uppercase truncate max-w-[60px] ${isOnline ? 'text-black dark:text-white' : 'text-zinc-400'}`}>
@@ -748,6 +878,9 @@ export default function Dashboard() {
                   {['WFH', 'Remote', 'Lapangan'].map(t => (
                     <button key={t} type="button" onClick={() => setReqForm({ ...reqForm, type: t as any })} className={`py-3 border-2 border-black rounded-lg text-[10px] font-black uppercase transition-all ${reqForm.type === t ? 'bg-neo-yellow shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -translate-y-0.5' : 'bg-zinc-50 dark:bg-zinc-800 dark:text-zinc-500'}`}>{t}</button>
                   ))}
+                  {/* Option 'Bercuti' usually for admin override, but if staff needs to apply leave, they can use this too? 
+                      The user requested 'Bercuti' for the ADMIN toggle specifically. 
+                      Let's leave user form as is or add it if requested. Stick to User Request: "toggle slider button... tambah 1 lagi status dekat sini 'bercuti'" (referring to admin toggle context). */}
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -771,6 +904,19 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      {/* CUSTOM CURSOR TOOLTIP */}
+      <div
+        ref={tooltipRef}
+        className={`fixed z-[9999] pointer-events-none transition-opacity duration-150 ${tooltipData ? 'opacity-100' : 'opacity-0'}`}
+        style={{ left: 0, top: 0 }}
+      >
+        {tooltipData && (
+          <div className={`text-[10px] font-black uppercase py-2 px-3 rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap border-2 border-black flex items-center gap-2 ${tooltipData.text === 'Office' ? 'bg-white text-black' : 'bg-neo-yellow text-black'}`}>
+            {tooltipData.text === 'Office' ? <Building2 size={12} /> : <MapPin size={12} />}
+            {tooltipData.text}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

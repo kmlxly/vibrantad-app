@@ -471,7 +471,7 @@ export default function Dashboard() {
   )
 
   const isAdmin = profile?.role?.toLowerCase() === 'admin'
-  const isHR = profile?.role?.toLowerCase() === 'hr'
+  const isHR = profile?.role?.toLowerCase() === 'hr' || profile?.role?.toLowerCase() === 'human resource'
 
   return (
     <div className="min-h-screen bg-neo-bg text-neo-dark font-sans !px-3 py-4 md:p-6 w-full max-w-7xl mx-auto pb-10">

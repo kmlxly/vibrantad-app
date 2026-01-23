@@ -614,14 +614,14 @@ export default function Dashboard() {
         >
           <MapPin size={16} /> Log Lokasi
           {isAdmin || isHR ? (
-            workingRequests.filter(r => r.status === 'pending').length > 0 && (
+            activeTab !== 'working' && workingRequests.filter(r => r.status === 'pending').length > 0 && (
               <span className="absolute -top-2 -right-2 bg-neo-primary text-white text-[9px] min-w-[18px] h-[18px] flex items-center justify-center rounded-full border-2 border-white dark:border-zinc-900 font-black px-1 animate-pulse">
                 {workingRequests.filter(r => r.status === 'pending').length}
               </span>
             )
           ) : (
-            workingRequests.filter(r => r.user_id === profile?.id && r.status !== 'pending' && r.created_at > (new Date(Date.now() - 86400000).toISOString())).length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-green-500 w-3 h-3 rounded-full border-2 border-white animate-ping" />
+            activeTab !== 'working' && workingRequests.filter(r => r.user_id === profile?.id && r.status === 'rejected' && r.created_at > (new Date(Date.now() - 86400000).toISOString())).length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 w-3 h-3 rounded-full border-2 border-white animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
             )
           )}
         </button>

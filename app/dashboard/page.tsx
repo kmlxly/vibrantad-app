@@ -449,9 +449,9 @@ export default function Dashboard() {
       await notifyAllAdmins(profile.full_name, newType, datesString);
 
       fetchData(); // Refresh UI
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('Gagal mengemaskini status.');
+      alert(`Gagal mengemaskini status: ${error.message || 'Ralat tidak diketahui'}`);
     }
   }
 

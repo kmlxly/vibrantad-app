@@ -129,7 +129,7 @@ export default function Dashboard() {
         setWorkingRequests(requestsResult)
       }
 
-    }, 30000)
+    }, 10000) // Poll every 10s to match heartbeat
     return () => clearInterval(pollInterval)
   }, [])
 
@@ -636,12 +636,12 @@ export default function Dashboard() {
               <div className="flex items-center gap-2 mb-3 px-1">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,1)]"></div>
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] dark:text-white flex items-center gap-2">
-                  Online Users <span className="text-zinc-400 font-bold px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded border border-black/5">{staffList.filter(s => s.last_seen && new Date().getTime() - new Date(s.last_seen).getTime() < 60000).length} Online</span>
+                  Online Users <span className="text-zinc-400 font-bold px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded border border-black/5">{staffList.filter(s => s.last_seen && new Date().getTime() - new Date(s.last_seen).getTime() < 25000).length} Online</span>
                 </h3>
               </div>
               <div className="flex gap-4">
                 {staffList.map((staff) => {
-                  const isOnline = staff.last_seen && new Date().getTime() - new Date(staff.last_seen).getTime() < 60000;
+                  const isOnline = staff.last_seen && new Date().getTime() - new Date(staff.last_seen).getTime() < 25000;
 
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);

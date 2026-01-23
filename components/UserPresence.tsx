@@ -36,7 +36,7 @@ export function UserPresence() {
 
         // Start polling immediately
         sendHeartbeat()
-        interval = setInterval(sendHeartbeat, 30000)
+        interval = setInterval(sendHeartbeat, 10000) // Increase frequency to 10s for faster status updates
 
         return () => {
             clearInterval(interval)

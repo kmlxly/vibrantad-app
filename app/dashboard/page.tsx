@@ -551,14 +551,13 @@ export default function Dashboard() {
                   <select
                     onChange={(e) => handleAdminStatusChange(e.target.value as any)}
                     value={(() => {
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      // Use workingRequests state directly which is up to date
+                      const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+
                       const activeReq = workingRequests.find(r =>
                         r.user_id === profile?.id &&
                         r.status === 'approved' &&
-                        today >= new Date(r.start_date) &&
-                        today <= new Date(r.end_date)
+                        todayStr >= r.start_date &&
+                        todayStr <= r.end_date
                       );
                       // Fallback to Office if no matching approved request
                       return activeReq ? activeReq.type : 'Office';

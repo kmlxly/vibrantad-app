@@ -547,31 +547,45 @@ export default function Dashboard() {
               </div>
 
               <div className="flex gap-1.5 items-center">
-                {isAdmin && (
-                  <select
-                    onChange={(e) => handleAdminStatusChange(e.target.value as any)}
-                    value={(() => {
-                      const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+                {/* Admin Status Toggle OR User Status Display */}
+                {(() => {
+                  const todayStr = new Date().toLocaleDateString('en-CA');
+                  const activeReq = workingRequests.find(r =>
+                    r.user_id === profile?.id &&
+                    r.status === 'approved' &&
+                    todayStr >= r.start_date &&
+                    todayStr <= r.end_date
+                  );
+                  const currentStatus = activeReq ? activeReq.type : 'Office';
 
-                      const activeReq = workingRequests.find(r =>
-                        r.user_id === profile?.id &&
-                        r.status === 'approved' &&
-                        todayStr >= r.start_date &&
-                        todayStr <= r.end_date
-                      );
-                      // Fallback to Office if no matching approved request
-                      return activeReq ? activeReq.type : 'Office';
-                    })()}
-                    className="bg-zinc-900 text-white px-2 py-1.5 rounded-md border border-zinc-700 hover:border-white transition-colors font-bold uppercase text-[9px] outline-none cursor-pointer text-center appearance-none"
-                    style={{ backgroundImage: 'none' }}
-                  >
-                    <option value="Office">🏢 Office</option>
-                    <option value="WFH">🏠 WFH</option>
-                    <option value="Remote">🌐 Remote</option>
-                    <option value="Lapangan">🚗 Site</option>
-                    <option value="Bercuti">🏖 Cuti</option>
-                  </select>
-                )}
+                  const statusLabels: Record<string, string> = {
+                    'Office': '🏢 Office',
+                    'WFH': '🏠 WFH',
+                    'Remote': '🌐 Remote',
+                    'Lapangan': '🚗 Site',
+                    'Bercuti': '🏖 Cuti'
+                  }
+
+                  return isAdmin ? (
+                    <select
+                      onChange={(e) => handleAdminStatusChange(e.target.value as any)}
+                      value={currentStatus}
+                      className="bg-zinc-900 text-white px-2 py-1.5 rounded-md border border-zinc-700 hover:border-white transition-colors font-bold uppercase text-[9px] outline-none cursor-pointer text-center appearance-none"
+                      style={{ backgroundImage: 'none' }}
+                    >
+                      <option value="Office">🏢 Office</option>
+                      <option value="WFH">🏠 WFH</option>
+                      <option value="Remote">🌐 Remote</option>
+                      <option value="Lapangan">🚗 Site</option>
+                      <option value="Bercuti">🏖 Cuti</option>
+                    </select>
+                  ) : (
+                    <div className="bg-zinc-900 text-zinc-400 px-3 py-1.5 rounded-md border border-zinc-800 font-bold uppercase text-[9px] text-center select-none cursor-not-allowed min-w-[70px]">
+                      {statusLabels[currentStatus] || currentStatus}
+                    </div>
+                  );
+                })()}
+
                 <button onClick={toggleTheme} className="bg-white text-black w-8 h-8 rounded-md hover:bg-neo-yellow transition-colors flex items-center justify-center">
                   {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
                 </button>
@@ -622,12 +636,12 @@ export default function Dashboard() {
               <div className="flex items-center gap-2 mb-3 px-1">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,1)]"></div>
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] dark:text-white flex items-center gap-2">
-                  Online Users <span className="text-zinc-400 font-bold px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded border border-black/5">{staffList.filter(s => s.last_seen && new Date().getTime() - new Date(s.last_seen).getTime() < 120000).length} Online</span>
+                  Online Users <span className="text-zinc-400 font-bold px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded border border-black/5">{staffList.filter(s => s.last_seen && new Date().getTime() - new Date(s.last_seen).getTime() < 60000).length} Online</span>
                 </h3>
               </div>
               <div className="flex gap-4">
                 {staffList.map((staff) => {
-                  const isOnline = staff.last_seen && new Date().getTime() - new Date(staff.last_seen).getTime() < 120000;
+                  const isOnline = staff.last_seen && new Date().getTime() - new Date(staff.last_seen).getTime() < 60000;
 
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);

@@ -5,8 +5,13 @@ import { supabase } from '@/lib/supabaseClient'
 
 export function UserPresence() {
     useEffect(() => {
+        let interval: NodeJS.Timeout
+
         // Function to send heartbeat
         const sendHeartbeat = async () => {
+            // Only send heartbeat if tab is visible
+            if (document.visibilityState === 'hidden') return
+
             try {
                 const { data: { session } } = await supabase.auth.getSession()
                 if (session) {
@@ -20,13 +25,23 @@ export function UserPresence() {
             }
         }
 
-        // Send immediately on mount
+        // Initial setup
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                sendHeartbeat() // Send immediately when coming back
+            }
+        }
+
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+
+        // Start polling immediately
         sendHeartbeat()
+        interval = setInterval(sendHeartbeat, 30000)
 
-        // Send every 30 seconds
-        const interval = setInterval(sendHeartbeat, 30000)
-
-        return () => clearInterval(interval)
+        return () => {
+            clearInterval(interval)
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+        }
     }, [])
 
     return null

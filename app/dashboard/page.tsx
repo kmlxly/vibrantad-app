@@ -441,6 +441,13 @@ export default function Dashboard() {
           }]);
         }
       }
+
+      // Notify other admins about this "Manual Update"
+      // User request: "untuk status approve ke tak dia still kena bagi tau dekat email macam biasa sebab admin ada dua orang..."
+      // So if I am admin and I toggle, I still notify admins.
+      const datesString = `${today} (Status Pantas)`;
+      await notifyAllAdmins(profile.full_name, newType, datesString);
+
       fetchData(); // Refresh UI
     } catch (error) {
       console.error(error);
@@ -546,7 +553,14 @@ export default function Dashboard() {
                     value={(() => {
                       const today = new Date();
                       today.setHours(0, 0, 0, 0);
-                      const activeReq = workingRequests.find(r => r.user_id === profile?.id && r.status === 'approved' && today >= new Date(r.start_date) && today <= new Date(r.end_date));
+                      // Use workingRequests state directly which is up to date
+                      const activeReq = workingRequests.find(r =>
+                        r.user_id === profile?.id &&
+                        r.status === 'approved' &&
+                        today >= new Date(r.start_date) &&
+                        today <= new Date(r.end_date)
+                      );
+                      // Fallback to Office if no matching approved request
                       return activeReq ? activeReq.type : 'Office';
                     })()}
                     className="bg-zinc-900 text-white px-2 py-1.5 rounded-md border border-zinc-700 hover:border-white transition-colors font-bold uppercase text-[9px] outline-none cursor-pointer text-center appearance-none"

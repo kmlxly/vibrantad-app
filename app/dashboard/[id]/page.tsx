@@ -50,6 +50,10 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
   const router = useRouter()
   const { theme, toggleTheme } = useTheme()
 
+  // Floating Tooltip State
+  const tooltipRef = useRef<HTMLDivElement>(null)
+  const [tooltipData, setTooltipData] = useState<{ text: string, reason?: string } | null>(null)
+
   const [projectName, setProjectName] = useState('')
   const [projectColor, setProjectColor] = useState('neo-yellow') // Default color
   const [reports, setReports] = useState<Report[]>([])
@@ -501,7 +505,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
     const reportSummary = filteredReports.map(r => `- [${r.type.toUpperCase()}] ${r.title}: ${r.outcome}`).join('\n')
     const issueSummary = notes.filter(n => n.type === 'issue').map(n => `- [ISU] ${n.content}`).join('\n')
     const suggestionSummary = notes.filter(n => n.type === 'suggestion').map(n => `- [CADANGAN] ${n.content}`).join('\n')
-    
+
     const fullText = `Laporan Projek: ${projectName}\n\nTASKS:\n${reportSummary}\n\n${issueSummary ? `ISSUES:\n${issueSummary}\n\n` : ''}${suggestionSummary ? `SUGGESTIONS:\n${suggestionSummary}` : ''}`
 
     if (navigator.share) {
@@ -585,7 +589,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
 
             {/* Project Info Card */}
             {/* Project Info Card */}
-            <div className="neo-card bg-white dark:bg-zinc-900 border-2 border-black dark:border-white p-0 relative overflow-hidden flex-grow flex flex-col justify-between min-h-[250px] group text-black">
+            <div className="neo-card bg-white dark:bg-zinc-800 border-2 border-black dark:border-white p-0 relative overflow-hidden flex-grow flex flex-col justify-between min-h-[250px] group text-black">
               {/* Colored Top Strip */}
               <div className={`h-4 w-full ${baseColorMap[projectColor] || 'bg-neo-yellow'} hover-stripes flex items-center justify-end px-2 border-b-2 border-black dark:border-white text-black`}>
                 <div className="w-20 h-full bg-white/20 transform -skew-x-12"></div>
@@ -639,7 +643,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
 
             {/* FORM AREA */}
             {showForm && (
-              <div className="bg-white dark:bg-zinc-900 border-4 border-black dark:border-white rounded-xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.5)] p-6 animate-in slide-in-from-top-4 duration-300 relative overflow-hidden text-black text-black">
+              <div className="bg-white dark:bg-zinc-800 border-4 border-black dark:border-white rounded-xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.5)] p-6 animate-in slide-in-from-top-4 duration-300 relative overflow-hidden text-black text-black">
 
                 {/* Decorative Form Header */}
                 <div className="flex items-center justify-between mb-6 border-b-4 border-black dark:border-white pb-4 text-black text-black text-black">
@@ -659,10 +663,10 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                       setEditingReport(null);
                       setFormData({ title: '', status: 'In Progress', type: 'project', working_location: 'Office', start_date: '', end_date: '', task_date: '', outcome: '', issues: '', next_action: '', attachment_url: '', attachment_name: '' });
                     }}
-                    className="bg-black text-white dark:bg-white dark:text-black p-2 rounded-lg border-2 border-black dark:border-white hover:scale-110 active:scale-95 transition-all shadow-neo-sm text-black"
+                    className="bg-black text-white dark:bg-white dark:text-black p-2 rounded-lg border-2 border-black dark:border-white hover:scale-110 active:scale-95 transition-all shadow-neo-sm"
                     title="Tutup Borang"
                   >
-                    <X size={20} />
+                    <X size={20} className="text-white dark:text-black" />
                   </button>
                 </div>
 
@@ -684,7 +688,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-black text-black text-black">
                       <div className="md:col-span-2 space-y-2 text-black text-black text-black">
                         <label className="flex items-center gap-2 font-black text-xs uppercase tracking-wide ml-1 dark:text-white text-black">
-                          <FileText size={14} className="text-zinc-400 text-black text-black" /> Tajuk Laporan / Tugasan
+                          <FileText size={14} className="text-zinc-400" /> Tajuk Laporan / Tugasan
                         </label>
                         <input
                           required
@@ -698,7 +702,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
 
                       <div className="space-y-2 text-black text-black text-black">
                         <label className="flex items-center gap-2 font-black text-xs uppercase tracking-wide ml-1 dark:text-white text-black">
-                          <Filter size={14} className="text-zinc-400 text-black text-black text-black" /> Jenis Laporan
+                          <Filter size={14} className="text-zinc-400" /> Jenis Laporan
                         </label>
                         <div className="flex gap-2 text-black text-black">
                           <button
@@ -720,13 +724,13 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
 
                       <div className="space-y-2 text-black text-black">
                         <label className="flex items-center gap-2 font-black text-xs uppercase tracking-wide ml-1 dark:text-white text-black">
-                          <MapPin size={14} className="text-zinc-400 text-black text-black" /> Lokasi Bekerja
+                          <MapPin size={14} className="text-zinc-400" /> Lokasi Bekerja
                         </label>
                         <div className="flex flex-wrap gap-2 text-black">
                           {['Office', 'WFH', 'Lapangan', 'Remote'].map((loc) => (
-                            <label key={loc} className={`flex items-center gap-2 cursor-pointer px-4 py-2.5 rounded-lg border-2 transition-all text-black ${formData.working_location === loc ? 'border-black bg-neo-yellow dark:border-white shadow-neo-sm -translate-y-0.5 text-black' : 'border-zinc-100 bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700 text-black text-black'}`}>
-                              <input type="radio" value={loc} checked={formData.working_location === loc} onChange={() => setFormData({ ...formData, working_location: loc as any })} className="hidden text-black" />
-                              <span className="font-bold text-[10px] uppercase dark:text-white text-black">{loc}</span>
+                            <label key={loc} className={`flex items-center gap-2 cursor-pointer px-4 py-2.5 rounded-lg border-2 transition-all ${formData.working_location === loc ? 'border-black bg-neo-yellow dark:border-white shadow-neo-sm -translate-y-0.5' : 'border-zinc-100 bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700'}`}>
+                              <input type="radio" value={loc} checked={formData.working_location === loc} onChange={() => setFormData({ ...formData, working_location: loc as any })} className="hidden" />
+                              <span className={`font-bold text-[10px] uppercase ${formData.working_location === loc ? 'text-black' : 'text-black dark:text-white'}`}>{loc}</span>
                             </label>
                           ))}
                         </div>
@@ -738,8 +742,8 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                   <div className="space-y-6 text-black text-black text-black text-black">
                     <div className="flex items-center justify-between border-b-2 border-zinc-100 dark:border-zinc-800 pb-3 text-black text-black">
                       <div className="flex items-center gap-3 text-black text-black">
-                        <div className="p-2 bg-neo-primary/10 rounded-lg text-black text-black">
-                          <Calendar size={20} className="text-neo-primary text-black" />
+                        <div className="p-2 bg-neo-primary/10 rounded-lg">
+                          <Calendar size={20} className="text-neo-primary" />
                         </div>
                         <div className="text-black">
                           <h4 className="font-black text-sm uppercase tracking-widest dark:text-white text-black">Masa & Progres</h4>
@@ -934,8 +938,8 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
 
                 {userRole === 'admin' && (
                   <div className="relative group w-full sm:w-64 text-black text-black text-black">
-                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-black dark:text-white text-black">
-                      <Filter size={14} className="text-black" />
+                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-black dark:text-white">
+                      <Filter size={14} className="text-black dark:text-white" />
                     </div>
                     <select
                       className="appearance-none w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-black dark:border-zinc-700 pl-10 pr-10 py-2.5 font-bold text-xs uppercase rounded-lg cursor-pointer hover:bg-neo-yellow transition-colors outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:text-white text-black text-black text-black text-black text-black"
@@ -948,8 +952,8 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                         <option key={staff.id} value={staff.id}>{staff.full_name}</option>
                       ))}
                     </select>
-                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-black dark:text-white text-black">
-                      <ChevronDown size={14} className="text-black" />
+                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-black dark:text-white">
+                      <ChevronDown size={14} className="text-black dark:text-white" />
                     </div>
                   </div>
                 )}
@@ -1101,7 +1105,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                     <p className="font-bold text-sm text-zinc-400 dark:text-zinc-600 mt-2 text-black text-black text-black text-black text-black text-black">Sila pilih kategori lain atau tambah rekod baru.</p>
                   </div>
                 ) : viewMode === 'list' ? (
-                  <div className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[255,255,255,0.5] text-black text-black text-black">
+                  <div className="bg-white dark:bg-zinc-800 border-2 border-black dark:border-white rounded-xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[255,255,255,0.5)] text-black text-black text-black">
                     {filteredReports.map((report, index) => (
                       <div
                         key={report.id}
@@ -1150,11 +1154,31 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                               {report.status}
                             </span>
                             {/* Icons only for verified/attachment to save space */}
-                            {findApprovedRequest(report.user_id, report.task_date || report.start_date, report.working_location) && (
-                              <span className="flex items-center gap-1 text-[7px] font-black uppercase bg-green-500 text-white px-2 py-0.5 rounded-full border border-black/10 animate-pulse shadow-neo-sm text-black text-black text-black text-black text-black">
-                                <ShieldCheck size={10} className="text-black text-black" /> VERIFIED
-                              </span>
-                            )}
+                            {(() => {
+                              const req = findApprovedRequest(report.user_id, report.task_date || report.start_date, report.working_location);
+                              if (req) {
+                                return (
+                                  <span
+                                    onMouseEnter={() => setTooltipData({ text: 'Lokasi kerja telah dibenarkan.', reason: req.reason })}
+                                    onMouseLeave={() => setTooltipData(null)}
+                                    onMouseMove={(e) => {
+                                      if (tooltipRef.current) {
+                                        const x = e.clientX + 15;
+                                        const y = e.clientY + 15;
+                                        // Basic overflow protection
+                                        const isRightOverflow = x + 200 > window.innerWidth;
+                                        tooltipRef.current.style.left = isRightOverflow ? `${e.clientX - 215}px` : `${x}px`;
+                                        tooltipRef.current.style.top = `${y}px`;
+                                      }
+                                    }}
+                                    className="flex items-center gap-1 text-[7px] font-black uppercase bg-green-500 text-white px-2 py-0.5 rounded-full border border-black/10 animate-pulse shadow-neo-sm cursor-help select-none"
+                                  >
+                                    <ShieldCheck size={10} className="text-black" /> VERIFIED
+                                  </span>
+                                )
+                              }
+                              return null;
+                            })()}
                             {report.attachment_url && <Paperclip size={10} className="text-neo-primary text-black text-black" />}
                           </div>
 
@@ -1184,8 +1208,8 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                           <div className="flex gap-1.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-black text-black">
                             {(userRole === 'admin' || report.user_id === userId) && (
                               <>
-                                <button onClick={(e) => { e.stopPropagation(); handleEditReport(report); }} className="p-1 px-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 sm:border-0 text-black text-black" title="Edit"><Edit3 size={12} className="text-black text-black" /></button>
-                                <button onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id); }} className="p-1 px-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-300 hover:text-red-500 border border-zinc-200 dark:border-zinc-700 sm:border-0 text-black text-black text-black text-black text-black text-black" title="Padam"><Trash2 size={12} className="text-black text-black text-black" /></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleEditReport(report); }} className="p-1 px-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 sm:border-0" title="Edit"><Edit3 size={12} className="text-zinc-500 dark:text-zinc-400" /></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id); }} className="p-1 px-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-300 hover:text-red-500 border border-zinc-200 dark:border-zinc-700 sm:border-0" title="Padam"><Trash2 size={12} className="text-red-400 dark:text-red-400" /></button>
                               </>
                             )}
                           </div>
@@ -1243,8 +1267,21 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                                         const approvedReq = findApprovedRequest(report.user_id, report.task_date || report.start_date, report.working_location);
                                         if (approvedReq) {
                                           return (
-                                            <span className="flex items-center gap-1 text-[7px] font-black uppercase bg-green-500 text-white px-1.5 py-0.5 rounded-full animate-pulse border border-black/10 text-black text-black text-black text-black" title={`Alasan: ${approvedReq.reason}`}>
-                                              <ShieldCheck size={8} className="text-black text-black" /> Verified
+                                            <span
+                                              onMouseEnter={() => setTooltipData({ text: 'Lokasi kerja telah dibenarkan.', reason: approvedReq.reason })}
+                                              onMouseLeave={() => setTooltipData(null)}
+                                              onMouseMove={(e) => {
+                                                if (tooltipRef.current) {
+                                                  const x = e.clientX + 15;
+                                                  const y = e.clientY + 15;
+                                                  const isRightOverflow = x + 150 > window.innerWidth;
+                                                  tooltipRef.current.style.left = isRightOverflow ? `${e.clientX - 165}px` : `${x}px`;
+                                                  tooltipRef.current.style.top = `${y}px`;
+                                                }
+                                              }}
+                                              className="flex items-center gap-1 text-[7px] font-black uppercase bg-green-500 text-white px-1.5 py-0.5 rounded-full animate-pulse border border-black/10 cursor-help select-none"
+                                            >
+                                              <ShieldCheck size={8} className="text-black" /> Verified
                                             </span>
                                           );
                                         }
@@ -1271,8 +1308,8 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity text-black text-black">
                                     {(userRole === 'admin' || report.user_id === userId) && (
                                       <>
-                                        <button onClick={(e) => { e.stopPropagation(); handleEditReport(report); }} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded text-zinc-400 text-black text-black"><Edit3 size={12} className="text-black text-black" /></button>
-                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id); }} className="p-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded text-red-300 hover:text-red-500 text-black text-black text-black text-black"><Trash2 size={12} className="text-black text-black" /></button>
+                                        <button onClick={(e) => { e.stopPropagation(); handleEditReport(report); }} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded text-zinc-400 dark:text-zinc-400"><Edit3 size={12} /></button>
+                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id); }} className="p-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded text-red-300 hover:text-red-500"><Trash2 size={12} /></button>
                                       </>
                                     )}
                                   </div>
@@ -1304,7 +1341,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                   </button>
                 </div>
 
-                <div className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[255,255,255,0.5] text-black text-black text-black text-black text-black">
+                <div className="bg-white dark:bg-zinc-800 border-2 border-black dark:border-white rounded-xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[255,255,255,0.5] text-black text-black text-black text-black text-black">
                   {/* ISSUES SUBSECTION */}
                   {(notes.some(n => n.type === 'issue') || reports.some(r => r.issues)) && (
                     <>
@@ -1313,18 +1350,18 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                           <AlertCircle size={14} className="text-black text-black" /> Bahagian 1: Isu & Masalah
                         </h3>
                       </div>
-                      
+
                       {/* 1. Mapped Report Issues */}
                       {reports.filter(r => r.issues).map((report) => (
-                          <div key={'summary-issue-' + report.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-200 dark:border-zinc-700 last:border-b-0 text-black text-black text-black text-black text-black text-black text-black text-black">
-                            <div className="w-full sm:w-auto min-w-[80px] sm:text-right shrink-0 text-black text-black text-black">
-                              <div className="text-xs font-black text-zinc-400 uppercase tracking-wider text-black text-black text-black text-black">#{report.id}</div>
-                            </div>
-                            <div className="flex-grow min-w-0 text-black text-black text-black">
-                              <h4 className="font-black text-xs uppercase text-zinc-500 mb-1 text-black text-black text-black text-black text-black">Berkenaan: {report.title}</h4>
-                              <p className="text-sm font-medium text-red-700 leading-relaxed italic text-black text-black text-black text-black text-black">{report.issues}</p>
-                            </div>
+                        <div key={'summary-issue-' + report.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-200 dark:border-zinc-700 last:border-b-0 text-black text-black text-black text-black text-black text-black text-black text-black">
+                          <div className="w-full sm:w-auto min-w-[80px] sm:text-right shrink-0 text-black text-black text-black">
+                            <div className="text-xs font-black text-zinc-400 uppercase tracking-wider text-black text-black text-black text-black">#{report.id}</div>
                           </div>
+                          <div className="flex-grow min-w-0 text-black text-black text-black">
+                            <h4 className="font-black text-xs uppercase text-zinc-500 mb-1 text-black text-black text-black text-black text-black">Berkenaan: {report.title}</h4>
+                            <p className="text-sm font-medium text-red-700 leading-relaxed italic text-black text-black text-black text-black text-black">{report.issues}</p>
+                          </div>
+                        </div>
                       ))}
                       {/* 2. Manual Issues */}
                       {notes.filter(n => n.type === 'issue').map((note) => (
@@ -1335,9 +1372,9 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                           <div className="flex-grow min-w-0 text-black text-black text-black">
                             <p className="text-sm font-medium text-red-700 leading-relaxed italic text-black text-black text-black text-black text-black text-black">{note.content}</p>
                           </div>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity text-black text-black text-black text-black text-black text-black">
-                            <button onClick={() => openNoteModal(note)} className="p-1.5 hover:bg-zinc-200 rounded text-zinc-500 text-black"><Edit3 size={14} className="text-black" /></button>
-                            <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 hover:bg-red-100 rounded text-red-400 text-black"><Trash2 size={14} className="text-black text-black" /></button>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => openNoteModal(note)} className="p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded text-zinc-500 dark:text-zinc-400"><Edit3 size={14} /></button>
+                            <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-400 dark:text-red-400"><Trash2 size={14} /></button>
                           </div>
                         </div>
                       ))}
@@ -1355,15 +1392,15 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
 
                       {/* 1. Mapped Report Suggestions */}
                       {reports.filter(r => r.next_action).map((report) => (
-                          <div key={'summary-suggest-' + report.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-200 dark:border-zinc-700 last:border-b-0 text-black text-black text-black text-black text-black text-black text-black text-black text-black">
-                            <div className="w-full sm:w-auto min-w-[80px] sm:text-right shrink-0 text-black text-black text-black text-black">
-                              <div className="text-xs font-black text-zinc-400 uppercase tracking-wider text-black text-black text-black text-black text-black">#{report.id}</div>
-                            </div>
-                            <div className="flex-grow min-w-0 text-black text-black text-black text-black">
-                              <h4 className="font-black text-xs uppercase text-zinc-500 mb-1 text-black text-black text-black text-black text-black text-black">Plan: {report.title}</h4>
-                              <p className="text-sm font-medium text-green-700 leading-relaxed text-black text-black text-black text-black text-black text-black text-black">{report.next_action}</p>
-                            </div>
+                        <div key={'summary-suggest-' + report.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-200 dark:border-zinc-700 last:border-b-0 text-black text-black text-black text-black text-black text-black text-black text-black text-black">
+                          <div className="w-full sm:w-auto min-w-[80px] sm:text-right shrink-0 text-black text-black text-black text-black">
+                            <div className="text-xs font-black text-zinc-400 uppercase tracking-wider text-black text-black text-black text-black text-black">#{report.id}</div>
                           </div>
+                          <div className="flex-grow min-w-0 text-black text-black text-black text-black">
+                            <h4 className="font-black text-xs uppercase text-zinc-500 mb-1 text-black text-black text-black text-black text-black text-black">Plan: {report.title}</h4>
+                            <p className="text-sm font-medium text-green-700 leading-relaxed text-black text-black text-black text-black text-black text-black text-black">{report.next_action}</p>
+                          </div>
+                        </div>
                       ))}
                       {/* 2. Manual Suggestions */}
                       {notes.filter(n => n.type === 'suggestion').map((note) => (
@@ -1374,9 +1411,9 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                           <div className="flex-grow min-w-0 text-black text-black text-black text-black">
                             <p className="text-sm font-medium text-green-700 leading-relaxed text-black text-black text-black text-black text-black text-black">{note.content}</p>
                           </div>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity text-black text-black text-black text-black text-black text-black text-black">
-                            <button onClick={() => openNoteModal(note)} className="p-1.5 hover:bg-zinc-200 rounded text-zinc-500 text-black"><Edit3 size={14} className="text-black" /></button>
-                            <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 hover:bg-red-100 rounded text-red-400 text-black"><Trash2 size={14} className="text-black text-black text-black" /></button>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => openNoteModal(note)} className="p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded text-zinc-500 dark:text-zinc-400"><Edit3 size={14} /></button>
+                            <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-400 dark:text-red-400"><Trash2 size={14} /></button>
                           </div>
                         </div>
                       ))}
@@ -1392,7 +1429,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
               {/* DETAILED REPORT MODAL */}
               {selectedReport && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300 text-black text-black text-black">
-                  <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl border-4 border-black dark:border-white rounded-2xl shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] dark:shadow-[255,255,255,0.4] overflow-hidden animate-in zoom-in-95 duration-300 text-black text-black text-black text-black text-black text-black">
+                  <div className="bg-white dark:bg-zinc-800 w-full max-w-2xl border-4 border-black dark:border-white rounded-2xl shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] dark:shadow-[255,255,255,0.4] overflow-hidden animate-in zoom-in-95 duration-300 text-black text-black text-black text-black text-black text-black">
                     {/* Modal Header */}
                     <div className={`p-6 border-b-4 border-black dark:border-white flex justify-between items-start gap-4 text-black text-black text-black ${selectedReport.status === 'Done' ? 'bg-green-400' : selectedReport.status === 'Blocked' ? 'bg-red-400' : 'bg-yellow-400 text-black text-black'}`}>
                       <div className="text-black text-black text-black">
@@ -1404,7 +1441,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                         </div>
                         <h3 className="text-3xl font-black uppercase italic leading-none tracking-tighter text-black text-black text-black text-black text-black text-black">{selectedReport.title}</h3>
                       </div>
-                      <button onClick={() => setSelectedReport(null)} className="bg-black text-white p-2 rounded-lg hover:scale-110 active:scale-90 transition-transform text-black text-black"><X size={24} className="text-black text-black" /></button>
+                      <button onClick={() => setSelectedReport(null)} className="bg-black text-white dark:bg-white dark:text-black p-2 rounded-lg hover:scale-110 active:scale-90 transition-transform"><X size={24} className="text-white dark:text-black" /></button>
                     </div>
 
                     {/* Modal Body */}
@@ -1417,25 +1454,25 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                             <div className="w-6 h-6 rounded-full overflow-hidden border border-black text-black text-black text-black text-black">
                               {(Array.isArray(selectedReport.profiles) ? selectedReport.profiles[0]?.avatar_url : selectedReport.profiles?.avatar_url) ? <img src={Array.isArray(selectedReport.profiles) ? selectedReport.profiles[0].avatar_url : selectedReport.profiles?.avatar_url} className="w-full h-full object-cover text-black text-black text-black text-black text-black" /> : <div className="w-full h-full bg-zinc-200 flex items-center justify-center text-black text-black text-black text-black text-black"><User size={12} className="text-black text-black text-black" /></div>}
                             </div>
-                            <span className="text-xs font-bold text-black text-black text-black text-black">{Array.isArray(selectedReport.profiles) ? selectedReport.profiles[0]?.full_name : selectedReport.profiles?.full_name}</span>
+                            <span className="text-xs font-bold text-black dark:text-white">{Array.isArray(selectedReport.profiles) ? selectedReport.profiles[0]?.full_name : selectedReport.profiles?.full_name}</span>
                           </div>
                         </div>
                         <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl border-2 border-black/5 dark:border-white/5 text-black text-black text-black">
                           <p className="text-[10px] font-black text-zinc-400 uppercase mb-1 text-black text-black text-black text-black">Status Semasa</p>
-                          <span className="text-xs font-black uppercase text-black text-black text-black text-black text-black">{selectedReport.status}</span>
+                          <span className="text-xs font-black uppercase text-black dark:text-white">{selectedReport.status}</span>
                         </div>
                         <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl border-2 border-black/5 dark:border-white/5 text-black text-black text-black text-black text-black">
                           <p className="text-[10px] font-black text-zinc-400 uppercase mb-1 text-black text-black text-black text-black text-black">Tarikh Mula</p>
-                          <span className="text-xs font-black text-black text-black text-black text-black text-black text-black text-black">{selectedReport.start_date || selectedReport.task_date || '--'}</span>
+                          <span className="text-xs font-black text-black dark:text-white">{selectedReport.start_date || selectedReport.task_date || '--'}</span>
                         </div>
                         <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl border-2 border-black/5 dark:border-white/5 text-black text-black text-black text-black text-black text-black">
                           <p className="text-[10px] font-black text-zinc-400 uppercase mb-1 text-black text-black text-black text-black text-black text-black">Sasaran Siap</p>
-                          <span className="text-xs font-black text-black text-black text-black text-black text-black text-black text-black text-black">{selectedReport.end_date || '--'}</span>
+                          <span className="text-xs font-black text-black dark:text-white">{selectedReport.end_date || '--'}</span>
                         </div>
                         <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl border-2 border-black/5 dark:border-white/5 text-black text-black text-black text-black text-black text-black text-black">
                           <p className="text-[10px] font-black text-zinc-400 uppercase mb-1 text-black text-black text-black text-black">Lokasi</p>
-                          <div className="flex items-center gap-1 text-xs font-black text-black text-black text-black text-black">
-                            <MapPin size={12} className="text-neo-primary text-black text-black text-black" />
+                          <div className="flex items-center gap-1 text-xs font-black text-black dark:text-white">
+                            <MapPin size={12} className="text-neo-primary" />
                             {selectedReport.working_location || 'Office'}
                           </div>
                         </div>
@@ -1445,7 +1482,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                       <div className="space-y-6 text-black text-black text-black text-black text-black">
                         <div className="relative p-6 bg-blue-50/50 dark:bg-blue-900/10 border-2 border-blue-100 dark:border-blue-900/30 rounded-2xl text-black text-black text-black">
                           <div className="absolute -top-3 left-4 bg-blue-500 text-white px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm text-black text-black text-black">Hasil / Outcome</div>
-                          <p className="text-sm font-medium leading-relaxed whitespace-pre-wrap text-black text-black text-black text-black">{selectedReport.outcome}</p>
+                          <p className="text-sm font-medium leading-relaxed whitespace-pre-wrap text-black dark:text-white">{selectedReport.outcome}</p>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-black text-black text-black text-black">
@@ -1555,7 +1592,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
                         <>
                           <button
                             onClick={() => { setSelectedReport(null); handleEditReport(selectedReport); }}
-                            className="px-6 py-2.5 bg-white dark:bg-zinc-700 border-2 border-black dark:border-white rounded-lg font-black text-xs uppercase shadow-neo-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all text-black text-black text-black text-black"
+                            className="px-6 py-2.5 bg-white dark:bg-zinc-700 border-2 border-black dark:border-white rounded-lg font-black text-xs uppercase shadow-neo-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all text-black dark:text-white"
                           >
                             Edit Laporan
                           </button>
@@ -1575,7 +1612,7 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
               {/* NOTE MODAL */}
               {showNoteModal && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 text-black text-black text-black">
-                  <div className="bg-white dark:bg-zinc-900 w-full max-w-md border-4 border-black dark:border-white rounded-xl shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.5)] animate-in zoom-in-95 overflow-hidden text-black text-black text-black text-black text-black text-black text-black">
+                  <div className="bg-white dark:bg-zinc-800 w-full max-w-md border-4 border-black dark:border-white rounded-xl shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.5)] animate-in zoom-in-95 overflow-hidden text-black text-black text-black text-black text-black text-black text-black">
                     <div className="flex justify-between items-center p-4 border-b-4 border-black dark:border-white bg-neo-yellow text-black text-black text-black text-black text-black">
                       <h3 className="text-xl font-black uppercase italic tracking-tighter text-black text-black text-black text-black">{editingNote ? 'Kemaskini Nota' : 'Tambah Manual'}</h3>
                       <button onClick={() => setShowNoteModal(false)} className="bg-black/10 hover:bg-black hover:text-white p-1 rounded transition-colors text-black text-black text-black text-black text-black text-black text-black text-black text-black text-black"><X size={18} /></button>
@@ -1617,6 +1654,23 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
             </div>
           </div>
         </div>
+      </div>
+      {/* CUSTOM CURSOR TOOLTIP */}
+      <div
+        ref={tooltipRef}
+        className={`fixed z-[9999] pointer-events-none transition-opacity duration-150 ${tooltipData ? 'opacity-100' : 'opacity-0'}`}
+        style={{ left: 0, top: 0 }}
+      >
+        {tooltipData && (
+          <div className="bg-black text-white p-3 rounded-lg shadow-[8px_8px_0px_0px_rgba(255,255,255,0.5)] max-w-[200px] border border-white/20">
+            <p className="text-[10px] font-bold leading-tight break-words text-white">{tooltipData.text}</p>
+            {tooltipData.reason && (
+              <p className="text-[9px] font-medium text-zinc-400 mt-1.5 pt-1.5 border-t border-zinc-700 italic leading-tight">
+                "{tooltipData.reason}"
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div >
   )

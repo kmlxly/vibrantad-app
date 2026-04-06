@@ -1386,7 +1386,7 @@ export default function Dashboard() {
                   {new Date().toLocaleDateString('ms-MY', { weekday: 'long', day: 'numeric', month: 'short' })}
                 </p>
               </div>
-              <button onClick={() => { setShowStandupModal(false); setStandupForm({ today_plan: '', yesterday_status: '' }); }}><X size={24} /></button>
+              <button onClick={() => { setShowStandupModal(false); setStandupForm({ today_plan: '', yesterday_status: '', project_id: '' }); }}><X size={24} /></button>
             </div>
             <form onSubmit={handleSubmitStandup} className="p-6 space-y-5">
               <div className="space-y-2">

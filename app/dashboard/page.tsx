@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { LogOut, FolderPlus, Trash2, FolderOpen, User, Edit3, X, Check, Briefcase, Shield, Crown, Filter, Camera, Loader2, Building2, Calendar, Clock, ChevronDown, Sun, Moon, UserPlus, MapPin, Send, CheckCircle2, XCircle, Hash } from 'lucide-react'
+import { LogOut, FolderPlus, Trash2, FolderOpen, User, Edit3, X, Check, Briefcase, Shield, Crown, Filter, Camera, Loader2, Building2, Calendar, Clock, ChevronDown, ChevronLeft, ChevronRight, Sun, Moon, UserPlus, MapPin, Send, CheckCircle2, XCircle, Hash, Download } from 'lucide-react'
 import { useTheme } from '@/lib/ThemeProvider'
 import { notifyAllAdmins, notifyStaffStatusUpdate } from '@/app/actions/emailActions'
 
@@ -28,6 +28,16 @@ type WorkingRequest = {
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
   profiles?: { full_name: string; avatar_url: string | null; email?: string };
+}
+type StandupLog = {
+  id: number;
+  user_id: string;
+  date: string;
+  today_plan: string;
+  yesterday_status: string | null;
+  project_id: number | null;
+  created_at: string;
+  profiles?: { full_name: string; avatar_url: string | null; job_title?: string };
 }
 
 export default function Dashboard() {
@@ -63,8 +73,19 @@ export default function Dashboard() {
     reason: ''
   })
 
+  // Standup States
+  const [standupLogs, setStandupLogs] = useState<StandupLog[]>([])
+  const [showStandupModal, setShowStandupModal] = useState(false)
+  const [standupLoading, setStandupLoading] = useState(false)
+  const [standupForm, setStandupForm] = useState({ today_plan: '', yesterday_status: '', project_id: '' })
+  const [viewingDate, setViewingDate] = useState<string>(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+  })
+  const [showCsvMenu, setShowCsvMenu] = useState(false)
+
   // Dashboard View State
-  const [activeTab, setActiveTab] = useState<'projects' | 'working'>('projects')
+  const [activeTab, setActiveTab] = useState<'projects' | 'working' | 'standup'>('projects')
 
   // Tooltip State
   const [tooltipData, setTooltipData] = useState<{ text: string; reason: string | null } | null>(null)
@@ -141,7 +162,8 @@ export default function Dashboard() {
       const user = session.user
 
       // 2. Fetch SEMUA data dalam satu batch (PARALLEL)
-      const [profileResult, projectsResult, staffResult, requestsResult] = await Promise.all([
+      const todayDate = new Date().toISOString().split('T')[0]
+      const [profileResult, projectsResult, staffResult, requestsResult, standupResult] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', user.id).single(),
 
         supabase
@@ -157,6 +179,12 @@ export default function Dashboard() {
         supabase
           .from('working_requests')
           .select('*, profiles!user_id(full_name, avatar_url, email)')
+          .order('created_at', { ascending: false }),
+
+        supabase
+          .from('standup_logs')
+          .select('*, profiles!user_id(full_name, avatar_url, job_title)')
+          .eq('date', todayDate)
           .order('created_at', { ascending: false })
       ])
 
@@ -182,6 +210,9 @@ export default function Dashboard() {
         console.error('Error fetching working requests:', requestsResult.error.message)
       }
       setWorkingRequests(requestsResult.data || [])
+
+      // Handle Standup Logs
+      if (!standupResult.error) setStandupLogs(standupResult.data || [])
 
     } catch (err) {
       console.error("Dashboard fetch error:", err)
@@ -381,6 +412,106 @@ export default function Dashboard() {
         alert('Permohonan telah dibatalkan. Status bekerja anda kini kembali ke Office.')
       }
     }
+  }
+
+  const localDateStr = (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
+
+  const todayStr = localDateStr(new Date())
+
+  const fetchStandupsForDate = async (date: string) => {
+    const { data } = await supabase
+      .from('standup_logs')
+      .select('*, profiles!user_id(full_name, avatar_url, job_title)')
+      .eq('date', date)
+      .order('created_at', { ascending: false })
+    setStandupLogs(data || [])
+  }
+
+  const handleDownloadCSV = async (range: 'today' | '30days' | '90days') => {
+    let logs: StandupLog[] = standupLogs
+    if (range !== 'today') {
+      const days = range === '30days' ? 30 : 90
+      const from = new Date(); from.setDate(from.getDate() - days)
+      const { data } = await supabase
+        .from('standup_logs')
+        .select('*, profiles!user_id(full_name, avatar_url, job_title)')
+        .gte('date', localDateStr(from))
+        .lte('date', todayStr)
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
+      logs = data || []
+    }
+    const rows = [['Tarikh', 'Nama', 'Jawatan', 'Plan Hari Ini', 'Update Semalam', 'Projek', 'Masa']]
+    logs.forEach(log => {
+      const proj = projects.find(p => p.id === log.project_id)
+      rows.push([
+        log.date,
+        log.profiles?.full_name || '',
+        log.profiles?.job_title || '',
+        `"${log.today_plan.replace(/"/g, '""')}"`,
+        `"${(log.yesterday_status || '').replace(/"/g, '""')}"`,
+        proj?.name || '-',
+        new Date(log.created_at).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })
+      ])
+    })
+    const csv = rows.map(r => r.join(',')).join('\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url
+    a.download = `standup-${range === 'today' ? viewingDate : range}.csv`; a.click()
+    URL.revokeObjectURL(url)
+    setShowCsvMenu(false)
+  }
+
+  const handleSubmitStandup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!standupForm.today_plan.trim()) return
+    setStandupLoading(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setStandupLoading(false); return }
+
+    const todayDate = new Date().toISOString().split('T')[0]
+    const projectId = standupForm.project_id ? parseInt(standupForm.project_id) : null
+
+    const { error } = await supabase.from('standup_logs').upsert({
+      user_id: user.id,
+      date: todayDate,
+      today_plan: standupForm.today_plan.trim(),
+      yesterday_status: standupForm.yesterday_status.trim() || null,
+      project_id: projectId
+    }, { onConflict: 'user_id,date' })
+
+    if (error) { alert(error.message); setStandupLoading(false); return }
+
+    // Auto-insert task into project reports if project selected
+    if (projectId) {
+      const todayStr = new Date().toISOString().split('T')[0]
+      const activeReq = workingRequests.find(r =>
+        r.user_id === user.id && r.status === 'approved' &&
+        todayStr >= r.start_date && todayStr <= r.end_date
+      )
+      const workLoc = activeReq?.type || 'Office'
+      await supabase.from('reports').insert({
+        project_id: projectId,
+        user_id: user.id,
+        title: standupForm.today_plan.trim(),
+        type: 'task',
+        status: 'In Progress',
+        working_location: workLoc,
+        task_date: todayDate,
+        start_date: todayDate,
+        end_date: todayDate,
+        outcome: '',
+        issues: '',
+        next_action: standupForm.yesterday_status.trim() || ''
+      })
+    }
+
+    setShowStandupModal(false)
+    setStandupForm({ today_plan: '', yesterday_status: '', project_id: '' })
+    fetchData()
+    setStandupLoading(false)
   }
 
   const handleEditClick = (e: React.MouseEvent, proj: Project) => {
@@ -601,7 +732,7 @@ export default function Dashboard() {
       {/* REMOVED OLD ADMIN TOGGLE UI */}
 
       {/* DASHBOARD TABS */}
-      <div className="grid grid-cols-2 sm:flex gap-2 mb-8 bg-zinc-100 dark:bg-zinc-800 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl w-full sm:w-fit">
+      <div className="grid grid-cols-3 sm:flex gap-2 mb-8 bg-zinc-100 dark:bg-zinc-800 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl w-full sm:w-fit">
         <button
           onClick={() => setActiveTab('projects')}
           className={`px-3 sm:px-6 py-3 rounded-lg sm:rounded-xl font-black uppercase text-[10px] sm:text-xs transition-all flex items-center justify-center gap-2 whitespace-nowrap ${activeTab === 'projects' ? 'bg-black text-white shadow-lg' : 'text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
@@ -623,6 +754,15 @@ export default function Dashboard() {
             activeTab !== 'working' && workingRequests.filter(r => r.user_id === profile?.id && r.status === 'rejected' && r.created_at > (new Date(Date.now() - 86400000).toISOString())).length > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-500 w-3 h-3 rounded-full border-2 border-white animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
             )
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('standup')}
+          className={`px-3 sm:px-6 py-3 rounded-lg sm:rounded-xl font-black uppercase text-[10px] sm:text-xs transition-all flex items-center justify-center gap-2 relative whitespace-nowrap ${activeTab === 'standup' ? 'bg-black text-white shadow-lg' : 'text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+        >
+          <CheckCircle2 size={16} /> Standup
+          {activeTab !== 'standup' && standupLogs.length > 0 && !standupLogs.find(s => s.user_id === profile?.id) && (
+            <span className="absolute -top-1 -right-1 bg-neo-yellow w-3 h-3 rounded-full border-2 border-white animate-pulse" />
           )}
         </button>
       </div>
@@ -656,33 +796,32 @@ export default function Dashboard() {
                   });
 
                   const workStatus = activeReq ? activeReq.type : 'Office';
+                  const statusEmoji: Record<string, string> = { 'Office': '🏢', 'WFH': '🏠', 'Remote': '🌐', 'Lapangan': '🚗', 'Bercuti': '🏖' };
+                  const pillText = `${staff.full_name.split(' ')[0]} • ${statusEmoji[workStatus] || ''} ${workStatus}`;
 
                   return (
                     <div
                       key={staff.id}
                       className="flex flex-col items-center gap-2 group relative cursor-help select-none"
-                      onMouseEnter={() => setTooltipData({ text: workStatus, reason: null })} // Re-using tooltipData for generic usage
+                      onMouseEnter={() => setTooltipData({ text: pillText, reason: workStatus })}
                       onMouseLeave={() => setTooltipData(null)}
                       onMouseMove={(e) => {
                         if (tooltipRef.current) {
                           const x = e.clientX + 15;
                           const y = e.clientY + 15;
-                          const isRightOverflow = x + 150 > window.innerWidth;
-                          tooltipRef.current.style.left = isRightOverflow ? `${e.clientX - 120}px` : `${x}px`;
+                          const isRightOverflow = x + 180 > window.innerWidth;
+                          tooltipRef.current.style.left = isRightOverflow ? `${e.clientX - 160}px` : `${x}px`;
                           tooltipRef.current.style.top = `${y}px`;
                         }
                       }}
                       onClick={(e) => {
-                        // Mobile / Click Behavior: Snap to bottom of element
                         e.stopPropagation();
-                        // Small delay to prevent mouseMove from overriding immediately if it's a hybrid device
                         const rect = e.currentTarget.getBoundingClientRect();
-                        setTooltipData({ text: workStatus, reason: null });
-
+                        setTooltipData({ text: pillText, reason: workStatus });
                         setTimeout(() => {
                           if (tooltipRef.current) {
-                            tooltipRef.current.style.left = `${rect.left + (rect.width / 2) - 40}px`; // Center ish
-                            tooltipRef.current.style.top = `${rect.bottom + 10}px`; // Below
+                            tooltipRef.current.style.left = `${rect.left + (rect.width / 2) - 60}px`;
+                            tooltipRef.current.style.top = `${rect.bottom + 10}px`;
                           }
                         }, 10);
                       }}
@@ -699,6 +838,9 @@ export default function Dashboard() {
                         </div>
                         {isOnline && (
                           <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-zinc-900 rounded-full animate-pulse"></div>
+                        )}
+                        {workStatus !== 'Office' && (
+                          <div className="absolute -top-1 -right-1 text-sm leading-none">{statusEmoji[workStatus]}</div>
                         )}
                       </div>
                       <span className={`text-[9px] font-black uppercase truncate max-w-[60px] ${isOnline ? 'text-black dark:text-white' : 'text-zinc-400'}`}>
@@ -777,72 +919,374 @@ export default function Dashboard() {
         )}
 
         {activeTab === 'working' && (
-          <div className="animate-in fade-in slide-in-from-bottom-5 duration-500">
-            <div className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white p-5 rounded-xl shadow-[4px_4px_0px_0px_rgba(253,224,71,1)] flex items-center gap-4 mb-8">
-              <div className="bg-black text-white p-3 rounded-xl"><Calendar size={24} /></div>
-              <div>
-                <h2 className="text-2xl font-black uppercase italic dark:text-white">
-                  {isAdmin || isHR ? 'Log Lokasi Staff' : 'Status Permohonan Saya'}
-                </h2>
-                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
-                  {isAdmin || isHR ? 'Status Kehadiran Luar Pejabat' : 'Rekod dan maklumbalas permohonan lokasi'}
-                </p>
+          <div className="animate-in fade-in slide-in-from-bottom-5 duration-500 space-y-8">
+
+            {/* STAFF STATUS BOARD - compact avatar row, visible to ALL */}
+            <div className="mb-2 overflow-x-auto pb-4 scrollbar-hide">
+              <div className="flex items-center gap-2 mb-3 px-1">
+                <MapPin size={13} className="text-zinc-400" />
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] dark:text-white flex items-center gap-2">
+                  Status Lokasi Hari Ini
+                  <span className="text-zinc-400 font-bold px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded border border-black/5">
+                    {new Date().toLocaleDateString('ms-MY', { day: '2-digit', month: 'short' })}
+                  </span>
+                </h3>
+              </div>
+              <div className="flex gap-4">
+                {staffList.map((staff) => {
+                  const todayBoard = new Date();
+                  todayBoard.setHours(0, 0, 0, 0);
+                  const activeReqBoard = workingRequests.find(req => {
+                    if (req.user_id !== staff.id || req.status !== 'approved') return false;
+                    const start = new Date(req.start_date); start.setHours(0, 0, 0, 0);
+                    const end = new Date(req.end_date); end.setHours(0, 0, 0, 0);
+                    return todayBoard >= start && todayBoard <= end;
+                  });
+                  const boardStatus = activeReqBoard ? activeReqBoard.type : 'Office';
+                  const isOnlineBoard = staff.last_seen && new Date().getTime() - new Date(staff.last_seen).getTime() < 25000;
+                  const statusEmoji: Record<string, string> = {
+                    'Office': '🏢', 'WFH': '🏠', 'Remote': '🌐', 'Lapangan': '🚗', 'Bercuti': '🏖'
+                  };
+                  const pillText = `${staff.full_name.split(' ')[0]} • ${statusEmoji[boardStatus] || ''} ${boardStatus}`;
+                  return (
+                    <div
+                      key={staff.id}
+                      className="flex flex-col items-center gap-2 group relative cursor-help select-none"
+                      onMouseEnter={() => setTooltipData({ text: pillText, reason: boardStatus })}
+                      onMouseLeave={() => setTooltipData(null)}
+                      onMouseMove={(e) => {
+                        if (tooltipRef.current) {
+                          const x = e.clientX + 15;
+                          const y = e.clientY + 15;
+                          const isRightOverflow = x + 180 > window.innerWidth;
+                          tooltipRef.current.style.left = isRightOverflow ? `${e.clientX - 160}px` : `${x}px`;
+                          tooltipRef.current.style.top = `${y}px`;
+                        }
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setTooltipData({ text: pillText, reason: boardStatus });
+                        setTimeout(() => {
+                          if (tooltipRef.current) {
+                            tooltipRef.current.style.left = `${rect.left + (rect.width / 2) - 60}px`;
+                            tooltipRef.current.style.top = `${rect.bottom + 10}px`;
+                          }
+                        }, 10);
+                      }}
+                    >
+                      <div className={`relative w-14 h-14 rounded-full border-4 ${isOnlineBoard ? 'border-green-400 p-0.5' : 'border-zinc-200 dark:border-zinc-800'} transition-all bg-white dark:bg-zinc-900 shadow-sm`}>
+                        <div className="w-full h-full rounded-full border-2 border-black overflow-hidden bg-white">
+                          {staff.avatar_url
+                            ? <img src={staff.avatar_url} className="w-full h-full object-cover" alt={staff.full_name} />
+                            : <div className="w-full h-full flex items-center justify-center bg-zinc-100 text-zinc-400"><User size={20} /></div>
+                          }
+                        </div>
+                        {isOnlineBoard && <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-zinc-900 rounded-full animate-pulse" />}
+                        {boardStatus !== 'Office' && (
+                          <div className="absolute -top-1 -right-1 text-sm leading-none">{statusEmoji[boardStatus]}</div>
+                        )}
+                      </div>
+                      <span className={`text-[9px] font-black uppercase truncate max-w-[60px] ${isOnlineBoard ? 'text-black dark:text-white' : 'text-zinc-400'}`}>
+                        {staff.full_name.split(' ')[0]}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {workingRequests.filter(r => (isAdmin || isHR) ? true : r.user_id === profile?.id).length === 0 ? (
-                <div className="col-span-full py-20 text-center border-4 border-dashed border-zinc-200 rounded-3xl bg-white dark:bg-zinc-900/50">
-                  <MapPin size={48} className="mx-auto text-zinc-200 mb-4" />
-                  <p className="font-black text-zinc-400 uppercase tracking-widest">Tiada rekod data dijumpai.</p>
+            {/* WFH WEEKLY CALENDAR */}
+            <div>
+              <div className="flex items-center gap-2 mb-3 px-1">
+                <Calendar size={13} className="text-zinc-400" />
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] dark:text-white">Jadual Minggu Ini</h3>
+              </div>
+              <div className="overflow-x-auto scrollbar-hide pb-2">
+                <div className="grid grid-cols-5 gap-2 min-w-[380px]">
+                  {Array.from({ length: 5 }, (_, i) => {
+                    const weekStart = new Date();
+                    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+                    const day = new Date(weekStart);
+                    day.setDate(weekStart.getDate() + i);
+                    const dayStr = day.toISOString().split('T')[0];
+                    const isToday = dayStr === new Date().toISOString().split('T')[0];
+                    const staffOnDay = staffList.filter(staff =>
+                      workingRequests.some(req =>
+                        req.user_id === staff.id &&
+                        req.status === 'approved' &&
+                        req.type !== ('Office' as any) &&
+                        dayStr >= req.start_date &&
+                        dayStr <= req.end_date
+                      )
+                    );
+                    const typeEmoji: Record<string, string> = { WFH: '🏠', Remote: '🌐', Lapangan: '🚗', Bercuti: '🏖' };
+                    return (
+                      <div key={dayStr} className={`border-2 border-black rounded-xl p-3 min-h-[90px] ${isToday ? 'bg-neo-yellow shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]' : 'bg-white dark:bg-zinc-900'}`}>
+                        <div className="text-center mb-2">
+                          <p className={`text-[8px] font-black uppercase ${isToday ? 'text-black' : 'text-zinc-400'}`}>
+                            {day.toLocaleDateString('ms-MY', { weekday: 'short' })}
+                          </p>
+                          <p className={`text-base font-black leading-none ${isToday ? 'text-black' : 'dark:text-white'}`}>{day.getDate()}</p>
+                        </div>
+                        <div className="space-y-1">
+                          {staffOnDay.length === 0
+                            ? <p className="text-[8px] text-zinc-300 text-center uppercase font-bold">—</p>
+                            : staffOnDay.map(staff => {
+                                const req = workingRequests.find(r => r.user_id === staff.id && r.status === 'approved' && dayStr >= r.start_date && dayStr <= r.end_date);
+                                return (
+                                  <div key={staff.id} className="flex items-center gap-1 bg-black/5 dark:bg-white/10 rounded px-1.5 py-0.5">
+                                    <span className="text-[9px]">{typeEmoji[req?.type || ''] || ''}</span>
+                                    <span className="text-[8px] font-black uppercase truncate dark:text-white">{staff.full_name.split(' ')[0]}</span>
+                                  </div>
+                                );
+                              })
+                          }
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ) : (
-                workingRequests
-                  .filter(r => (isAdmin || isHR) ? true : r.user_id === profile?.id)
-                  .map((req) => (
-                    <div key={req.id} className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-2xl p-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full border-2 border-black overflow-hidden bg-zinc-100">
-                            {req.profiles?.avatar_url ? <img src={req.profiles.avatar_url} className="w-full h-full object-cover" /> : <User size={20} className="m-auto mt-2" />}
+              </div>
+            </div>
+
+            {/* REQUEST LOG */}
+            <div>
+              <div className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white p-5 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-4 mb-6">
+                <div className="bg-black text-white p-3 rounded-xl"><Calendar size={24} /></div>
+                <div>
+                  <h2 className="text-2xl font-black uppercase italic dark:text-white">
+                    {isAdmin || isHR ? 'Log Lokasi Staff' : 'Status Permohonan Saya'}
+                  </h2>
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
+                    {isAdmin || isHR ? 'Semak & luluskan permohonan staff' : 'Rekod dan maklumbalas permohonan lokasi'}
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {workingRequests.filter(r => (isAdmin || isHR) ? true : r.user_id === profile?.id).length === 0 ? (
+                  <div className="col-span-full py-20 text-center border-4 border-dashed border-zinc-200 rounded-3xl bg-white dark:bg-zinc-900/50">
+                    <MapPin size={48} className="mx-auto text-zinc-200 mb-4" />
+                    <p className="font-black text-zinc-400 uppercase tracking-widest">Tiada rekod data dijumpai.</p>
+                  </div>
+                ) : (
+                  workingRequests
+                    .filter(r => (isAdmin || isHR) ? true : r.user_id === profile?.id)
+                    .map((req) => (
+                      <div key={req.id} className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-2xl p-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full border-2 border-black overflow-hidden bg-zinc-100">
+                              {req.profiles?.avatar_url ? <img src={req.profiles.avatar_url} className="w-full h-full object-cover" /> : <User size={20} className="m-auto mt-2" />}
+                            </div>
+                            <div>
+                              <p className="text-xs font-black uppercase dark:text-white leading-none">{req.profiles?.full_name}</p>
+                              <p className="text-[9px] font-bold text-zinc-400 mt-1 uppercase">{new Date(req.created_at).toLocaleDateString()}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-xs font-black uppercase dark:text-white leading-none">{req.profiles?.full_name}</p>
-                            <p className="text-[9px] font-bold text-zinc-400 mt-1 uppercase">{new Date(req.created_at).toLocaleDateString()}</p>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[9px] font-black uppercase px-2 py-1 rounded border-2 border-black ${req.status === 'pending' ? 'bg-neo-yellow' : req.status === 'approved' ? 'bg-green-400' : 'bg-red-400 text-white'}`}>{req.status}</span>
+                            {(isAdmin || req.user_id === profile?.id) && (
+                              <button
+                                onClick={() => handleDeleteRequest(req.id, req.user_id)}
+                                className="p-1.5 bg-white dark:bg-zinc-800 border-2 border-black dark:border-white rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none"
+                                title="Batal / Padam Permohonan"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[9px] font-black uppercase px-2 py-1 rounded border-2 border-black ${req.status === 'pending' ? 'bg-neo-yellow' : req.status === 'approved' ? 'bg-green-400' : 'bg-red-400 text-white'}`}>{req.status}</span>
-                          {(isAdmin || req.user_id === profile?.id) && (
+
+                        <div className="bg-zinc-50 dark:bg-zinc-800 p-4 rounded-xl border-2 border-black/5 space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="bg-black text-white text-[10px] font-black px-2 py-0.5 rounded uppercase">{req.type}</span>
+                            <span className="text-[9px] font-bold text-zinc-500 uppercase">{req.start_date} → {req.end_date}</span>
+                          </div>
+                          <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400 leading-relaxed italic">"{req.reason}"</p>
+                        </div>
+
+                        {isAdmin && req.status === 'pending' && (
+                          <div className="flex gap-2 mt-auto">
+                            <button onClick={() => handleUpdateStatus(req.id, 'approved')} className="flex-1 bg-green-400 border-2 border-black py-2.5 rounded-lg text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all">Approve</button>
+                            <button onClick={() => handleUpdateStatus(req.id, 'rejected')} className="flex-1 bg-red-400 text-white border-2 border-black py-2.5 rounded-lg text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all">Reject</button>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* STANDUP TAB */}
+        {activeTab === 'standup' && (
+          <div className="animate-in fade-in slide-in-from-bottom-5 duration-500 space-y-6">
+
+            {/* Header + Date Nav + Buttons */}
+            <div className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white p-5 rounded-xl shadow-[4px_4px_0px_0px_rgba(253,224,71,1)] flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="bg-neo-yellow border-2 border-black p-3 rounded-xl"><CheckCircle2 size={24} /></div>
+                  <div>
+                    <h2 className="text-2xl font-black uppercase italic dark:text-white">Daily Standup</h2>
+                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
+                      {new Date(viewingDate + 'T00:00:00').toLocaleDateString('ms-MY', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {/* Download CSV - admin only */}
+                  {isAdmin && (
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowCsvMenu(v => !v)}
+                        className="bg-zinc-100 dark:bg-zinc-800 border-2 border-black px-3 py-2 rounded-lg font-black uppercase text-[10px] flex items-center gap-1.5 hover:bg-neo-yellow transition-all dark:text-white"
+                      >
+                        <Download size={13} /> Export <ChevronDown size={11} />
+                      </button>
+                      {showCsvMenu && (
+                        <div className="absolute right-0 top-full mt-1 bg-white dark:bg-zinc-900 border-2 border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-20 min-w-[150px] overflow-hidden">
+                          {[
+                            { label: 'Hari Ini', value: 'today' as const },
+                            { label: '30 Hari Lepas', value: '30days' as const },
+                            { label: '90 Hari Lepas', value: '90days' as const },
+                          ].map(opt => (
                             <button
-                              onClick={() => handleDeleteRequest(req.id, req.user_id)}
-                              className="p-1.5 bg-white dark:bg-zinc-800 border-2 border-black dark:border-white rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none"
-                              title="Batal / Padam Permohonan"
+                              key={opt.value}
+                              onClick={() => handleDownloadCSV(opt.value)}
+                              className="w-full text-left px-4 py-2.5 text-[10px] font-black uppercase hover:bg-neo-yellow dark:text-white dark:hover:text-black transition-colors border-b border-black/5 last:border-0"
                             >
-                              <Trash2 size={12} />
+                              {opt.label}
                             </button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="bg-zinc-50 dark:bg-zinc-800 p-4 rounded-xl border-2 border-black/5 space-y-3">
-                        <div className="flex justify-between items-center">
-                          <span className="bg-black text-white text-[10px] font-black px-2 py-0.5 rounded uppercase">{req.type}</span>
-                          <span className="text-[9px] font-bold text-zinc-500 uppercase">{req.start_date} → {req.end_date}</span>
-                        </div>
-                        <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400 leading-relaxed italic">"{req.reason}"</p>
-                      </div>
-
-                      {isAdmin && req.status === 'pending' && (
-                        <div className="flex gap-2 mt-auto">
-                          <button onClick={() => handleUpdateStatus(req.id, 'approved')} className="flex-1 bg-green-400 border-2 border-black py-2.5 rounded-lg text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all">Approve</button>
-                          <button onClick={() => handleUpdateStatus(req.id, 'rejected')} className="flex-1 bg-red-400 text-white border-2 border-black py-2.5 rounded-lg text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all">Reject</button>
+                          ))}
                         </div>
                       )}
                     </div>
-                  ))
+                  )}
+                  {/* Submit/Edit - only for today */}
+                  {viewingDate >= todayStr && (
+                    standupLogs.find(s => s.user_id === profile?.id) ? (
+                      <button
+                        onClick={() => {
+                          const mine = standupLogs.find(s => s.user_id === profile?.id);
+                          setStandupForm({ today_plan: mine?.today_plan || '', yesterday_status: mine?.yesterday_status || '', project_id: mine?.project_id?.toString() || '' });
+                          setShowStandupModal(true);
+                        }}
+                        className="bg-zinc-100 dark:bg-zinc-800 border-2 border-black px-4 py-2 rounded-lg font-black uppercase text-[10px] flex items-center gap-2 hover:bg-neo-yellow transition-all dark:text-white"
+                      >
+                        <Edit3 size={13} /> Edit
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setShowStandupModal(true)}
+                        className="bg-black text-white border-2 border-black px-5 py-2 rounded-lg font-black uppercase text-[10px] shadow-[3px_3px_0px_0px_rgba(253,224,71,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all flex items-center gap-2"
+                      >
+                        <Send size={13} /> Tulis Standup
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
+
+              {/* Date Navigation - admin only */}
+              {isAdmin && (
+                <div className="flex items-center gap-2 pt-1 border-t-2 border-black/5 dark:border-white/10">
+                  <button
+                    onClick={() => {
+                      const d = new Date(viewingDate + 'T12:00:00')
+                      d.setDate(d.getDate() - 1)
+                      const s = localDateStr(d)
+                      const min = new Date(); min.setDate(min.getDate() - 90)
+                      if (d >= min) { setViewingDate(s); fetchStandupsForDate(s) }
+                    }}
+                    disabled={(() => { const d = new Date(viewingDate + 'T12:00:00'); const min = new Date(); min.setDate(min.getDate() - 90); return localDateStr(d) <= localDateStr(min) })()}
+                    className="p-1.5 border-2 border-black rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all disabled:opacity-30 dark:text-white"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <input
+                    type="date"
+                    value={viewingDate}
+                    min={localDateStr(new Date(new Date().setDate(new Date().getDate() - 90)))}
+                    max={todayStr}
+                    onChange={e => { if (e.target.value) { setViewingDate(e.target.value); fetchStandupsForDate(e.target.value) } }}
+                    className="flex-1 text-center text-[10px] font-black uppercase bg-transparent border-2 border-black rounded-lg px-2 py-1.5 dark:text-white dark:border-white cursor-pointer outline-none"
+                  />
+                  <button
+                    onClick={() => {
+                      const d = new Date(viewingDate + 'T12:00:00')
+                      d.setDate(d.getDate() + 1)
+                      const s = localDateStr(d)
+                      if (s <= todayStr) { setViewingDate(s); fetchStandupsForDate(s) }
+                    }}
+                    disabled={viewingDate >= todayStr}
+                    className="p-1.5 border-2 border-black rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all disabled:opacity-30 dark:text-white"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
               )}
             </div>
+
+            {/* Standup Feed */}
+            {standupLogs.length === 0 ? (
+              <div className="py-20 text-center border-4 border-dashed border-zinc-200 rounded-3xl bg-white dark:bg-zinc-900/50">
+                <CheckCircle2 size={48} className="mx-auto text-zinc-200 mb-4" />
+                <p className="font-black text-zinc-400 uppercase tracking-widest text-sm">Tiada standup untuk tarikh ini.</p>
+                {viewingDate === todayStr && <p className="text-zinc-400 text-xs mt-1">Jadi yang pertama!</p>}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {standupLogs.map((log) => {
+                  const isMe = log.user_id === profile?.id;
+                  const linkedProject = projects.find(p => p.id === log.project_id);
+                  return (
+                    <div key={log.id} className={`border-2 border-black rounded-2xl p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-4 ${isMe ? 'bg-neo-yellow' : 'bg-white dark:bg-zinc-900'}`}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full border-2 border-black overflow-hidden bg-zinc-100 shrink-0">
+                          {log.profiles?.avatar_url
+                            ? <img src={log.profiles.avatar_url} className="w-full h-full object-cover" />
+                            : <div className="w-full h-full flex items-center justify-center"><User size={18} /></div>
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-xs font-black uppercase leading-none ${isMe ? 'text-black' : 'dark:text-white'}`}>{log.profiles?.full_name}</p>
+                          <p className={`text-[9px] font-bold mt-0.5 uppercase ${isMe ? 'text-black/60' : 'text-zinc-400'}`}>{log.profiles?.job_title}</p>
+                        </div>
+                        {isMe && <span className="text-[8px] font-black uppercase bg-black text-white px-2 py-0.5 rounded">Anda</span>}
+                      </div>
+
+                      <div className="space-y-3">
+                        <div>
+                          <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${isMe ? 'text-black/60' : 'text-zinc-400'}`}>📋 Hari Ini</p>
+                          <p className={`text-xs font-medium leading-relaxed ${isMe ? 'text-black' : 'text-zinc-700 dark:text-zinc-300'}`}>{log.today_plan}</p>
+                        </div>
+                        {log.yesterday_status && (
+                          <div>
+                            <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${isMe ? 'text-black/60' : 'text-zinc-400'}`}>✅ Semalam</p>
+                            <p className={`text-xs font-medium leading-relaxed ${isMe ? 'text-black' : 'text-zinc-700 dark:text-zinc-300'}`}>{log.yesterday_status}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between mt-auto">
+                        {linkedProject ? (
+                          <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded border border-black/20 flex items-center gap-1 ${isMe ? 'bg-black/10 text-black' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'}`}>
+                            📁 {linkedProject.name}
+                          </span>
+                        ) : <span />}
+                        <p className={`text-[8px] font-bold uppercase ${isMe ? 'text-black/40' : 'text-zinc-300'}`}>
+                          {new Date(log.created_at).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -931,6 +1375,70 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      {/* STANDUP MODAL */}
+      {showStandupModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-md border-4 border-black dark:border-white rounded-2xl shadow-[8px_8px_0px_0px_rgba(253,224,71,1)] animate-in zoom-in-95">
+            <div className="p-5 border-b-4 border-black flex justify-between items-center bg-neo-yellow rounded-t-[14px]">
+              <div>
+                <h3 className="text-lg font-black uppercase italic">Daily Standup</h3>
+                <p className="text-[9px] font-bold uppercase text-black/60">
+                  {new Date().toLocaleDateString('ms-MY', { weekday: 'long', day: 'numeric', month: 'short' })}
+                </p>
+              </div>
+              <button onClick={() => { setShowStandupModal(false); setStandupForm({ today_plan: '', yesterday_status: '' }); }}><X size={24} /></button>
+            </div>
+            <form onSubmit={handleSubmitStandup} className="p-6 space-y-5">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest dark:text-white flex items-center gap-1.5">
+                  📋 Apa yang anda plan hari ini?
+                </label>
+                <textarea
+                  autoFocus
+                  required
+                  className="w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-black p-3 font-medium text-sm rounded-lg outline-none h-28 resize-none dark:text-white focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all"
+                  placeholder="Contoh: Siapkan wireframe halaman dashboard, meeting dengan client jam 3..."
+                  value={standupForm.today_plan}
+                  onChange={e => setStandupForm({ ...standupForm, today_plan: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest dark:text-white flex items-center gap-1.5">
+                  ✅ Update semalam <span className="text-zinc-400 font-bold normal-case">(pilihan)</span>
+                </label>
+                <textarea
+                  className="w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-black p-3 font-medium text-sm rounded-lg outline-none h-20 resize-none dark:text-white focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all"
+                  placeholder="Contoh: Dah siapkan design logo, pending feedback dari client..."
+                  value={standupForm.yesterday_status}
+                  onChange={e => setStandupForm({ ...standupForm, yesterday_status: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest dark:text-white flex items-center gap-1.5">
+                  📁 Link ke Projek <span className="text-zinc-400 font-bold normal-case">(pilihan)</span>
+                </label>
+                <select
+                  className="w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-black p-3 font-bold text-sm rounded-lg outline-none dark:text-white"
+                  value={standupForm.project_id}
+                  onChange={e => setStandupForm({ ...standupForm, project_id: e.target.value })}
+                >
+                  <option value="">— Tiada projek —</option>
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                {standupForm.project_id && (
+                  <p className="text-[9px] text-zinc-500 font-bold uppercase">✅ Task akan auto-cipta dalam report projek ini</p>
+                )}
+              </div>
+              <button type="submit" disabled={standupLoading} className="w-full bg-black text-white border-2 border-black py-3.5 font-black uppercase text-xs rounded-xl shadow-[4px_4px_0px_0px_rgba(253,224,71,1)] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                {standupLoading ? <Loader2 className="animate-spin" size={16} /> : <><Send size={14} /> Hantar Standup</>}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* CUSTOM CURSOR TOOLTIP */}
       <div
         ref={tooltipRef}
